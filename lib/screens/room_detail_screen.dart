@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flex_color_picker/flex_color_picker.dart'; // Renk Seçici
-import 'package:smarthome/services/sensor_service.dart'; // SensorService'i import ettik
-import 'package:smarthome/services/database_service.dart'; // DatabaseService'i import ettik
+import 'package:flutter/widgets.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:smarthome/services/sensor_service.dart';
+import 'package:smarthome/services/database_service.dart';
+import 'dart:async';
 
 class RoomDetailsScreen extends StatefulWidget {
   final String roomName;
@@ -15,15 +17,16 @@ class RoomDetailsScreen extends StatefulWidget {
 class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   List<String> devices = [];
   bool isClimaOn = false;
-  bool isLightOn = false;
+  bool isLightOn = false; // Işık durumunu takip etmek için
   bool isTvOn = false;
   double? temperature;
   double? humidity;
-  double lightIntensity = 50.0; // Işık yoğunluğu varsayalım
-  double climaTemperature = 22.0; // Klima sıcaklık varsayalım
-  Color lightColor = Colors.white; // Işık rengi varsayalım
+  double lightIntensity = 50.0;
+  double climaTemperature = 22.0;
+  Color lightColor = Colors.white;
 
-  final DatabaseService _databaseService = DatabaseService(); // DatabaseService örneği
+  final DatabaseService _databaseService = DatabaseService();
+  Timer? _timer;
 
   // Cihazları eklemek için
   void addDevice(String deviceName) {
@@ -32,7 +35,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         devices.add(deviceName);
       }
     });
-    _saveRoomData();  // Firestore'a kaydet
+    _saveRoomData();
   }
 
   // Firestore'a veri kaydetme
@@ -44,12 +47,12 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       'climaTemp': climaTemperature,
       'lightIntensity': lightIntensity,
       'isClimaOn': isClimaOn,
-      'isLightOn': isLightOn,
+      'isLightOn': isLightOn,  // Işık durumu
       'isTvOn': isTvOn,
       'temperature': temperature,
       'humidity': humidity,
     };
-    await _databaseService.saveRoomData(widget.roomName, data);  // DatabaseService ile Firestore'a kaydet
+    await _databaseService.saveRoomData(widget.roomName, data);
   }
 
   // Sıcaklık ve nem verilerini çekme
@@ -63,7 +66,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   // Renk Seçici Dialog
   void _showColorPicker() async {
-    Color pickedColor = lightColor; // Varsayılan renk
+    Color pickedColor = lightColor;
     showDialog(
       context: context,
       builder: (context) {
@@ -73,12 +76,12 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             color: pickedColor,
             onColorChanged: (color) {
               setState(() {
-                lightColor = color;  // lightColor'u güncelle
+                lightColor = color;
               });
-              _saveRoomData();  // Firestore'a kaydet
+              _saveRoomData();
             },
-            showColorCode: true, // Renk kodunu göster
-            wheelDiameter: 250, // Renk çarkı çapı
+            showColorCode: true,
+            wheelDiameter: 250,
           ),
           actions: [
             TextButton(
@@ -102,8 +105,30 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    fetchSensorData();  // İlk olarak sıcaklık ve nem verilerini al
-    _loadRoomData();  // Verileri Firestore'dan yükle
+    _loadRoomData();
+    // Periyodik veri güncellemeleri başlatılıyor
+    _startPeriodicUpdates();
+  }
+
+  @override
+  void dispose() {
+    // Periyodik güncellemeleri durduruyoruz
+    _stopPeriodicUpdates();
+    super.dispose();
+  }
+
+  // Periyodik veri güncellemelerini başlat
+  void _startPeriodicUpdates() {
+    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
+      fetchSensorData();  // 10 saniyede bir veriyi güncelle
+    });
+  }
+
+  // Periyodik veri güncellemelerini durdur
+  void _stopPeriodicUpdates() {
+    if (_timer != null) {
+      _timer!.cancel();
+    }
   }
 
   // Firestore'dan odadaki verileri yükleme
@@ -113,11 +138,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     if (roomData != null) {
       setState(() {
         devices = List<String>.from(roomData['devices'] ?? []);
-        lightColor = Color(int.parse(roomData['lightColor'])); // Renk bilgisini al
+        lightColor = Color(int.parse(roomData['lightColor']));
         climaTemperature = roomData['climaTemp'];
         lightIntensity = roomData['lightIntensity'];
         isClimaOn = roomData['isClimaOn'];
-        isLightOn = roomData['isLightOn'];
+        isLightOn = roomData['isLightOn'];  // Işık durumu
         isTvOn = roomData['isTvOn'];
         temperature = roomData['temperature'];
         humidity = roomData['humidity'];
@@ -125,6 +150,15 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     } else {
       print("Oda verisi bulunamadı.");
     }
+  }
+
+  // Işık açma/kapatma
+  Future<void> _controlLight(bool isOn) async {
+    setState(() {
+      isLightOn = isOn;
+    });
+    await SensorService.controlLight(isOn);  // ESP32'ye ışığı açma/kapama komutu gönder
+    _saveRoomData();  // Veriyi kaydet
   }
 
   @override
@@ -143,14 +177,55 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
-            // Cihazlar listesi
             devices.isEmpty
                 ? Center(child: Text('Henüz cihaz eklenmemiş.'))
                 : Expanded(
               child: ListView.builder(
                 itemCount: devices.length,
                 itemBuilder: (context, index) {
-                  if (devices[index] == 'Klima') {
+                  if (devices[index] == 'Işık') {
+                    return Card(
+                      child: ListTile(
+                        leading: Icon(Icons.lightbulb, color: lightColor),
+                        title: Text('Işık'),
+                        subtitle: Column(
+                          children: [
+                            // Işık rengini yuvarlak bir kutuda göstermek için
+                            Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: lightColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Slider(
+                              value: lightIntensity,
+                              min: 0.0,
+                              max: 100.0,
+                              onChanged: (value) {
+                                setState(() {
+                                  lightIntensity = value;
+                                });
+                                _saveRoomData();
+                              },
+                            ),
+                            ElevatedButton(
+                              onPressed: _showColorPicker,
+                              child: Text("Rengi Seç"),
+                            ),
+                          ],
+                        ),
+                        trailing: Switch(
+                          value: isLightOn,
+                          onChanged: (value) {
+                            // Işığı açma veya kapama
+                            _controlLight(value);
+                          },
+                        ),
+                      ),
+                    );
+                  } else if (devices[index] == 'Klima') {
                     return Card(
                       child: ListTile(
                         leading: Icon(Icons.ac_unit, color: Colors.blue),
@@ -166,7 +241,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                                 setState(() {
                                   climaTemperature = value;
                                 });
-                                _saveRoomData();  // Firestore'a kaydet
+                                _saveRoomData();
                               },
                             ),
                           ],
@@ -177,51 +252,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                             setState(() {
                               isClimaOn = value;
                             });
-                            _saveRoomData();  // Firestore'a kaydet
-                          },
-                        ),
-                      ),
-                    );
-                  } else if (devices[index] == 'Işık') {
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.lightbulb, color: lightColor),
-                        title: Text('Işık'),
-                        subtitle: Column(
-                          children: [
-                            // Işık rengini yuvarlak bir kutuda göstermek için
-                            Container(
-                              height: 40, // Yuvarlak kutunun yüksekliği
-                              width: 40,  // Yuvarlak kutunun genişliği
-                              decoration: BoxDecoration(
-                                color: lightColor, // Seçilen renk kutuda görünecek
-                                shape: BoxShape.circle, // Yuvarlak şekil
-                              ),
-                            ),
-                            Slider(
-                              value: lightIntensity,
-                              min: 0.0,
-                              max: 100.0,
-                              onChanged: (value) {
-                                setState(() {
-                                  lightIntensity = value;
-                                });
-                                _saveRoomData();  // Firestore'a kaydet
-                              },
-                            ),
-                            ElevatedButton(
-                              onPressed: _showColorPicker,  // Renk seçici butonu
-                              child: Text("Rengi Seç"),
-                            ),
-                          ],
-                        ),
-                        trailing: Switch(
-                          value: isLightOn,
-                          onChanged: (value) {
-                            setState(() {
-                              isLightOn = value;
-                            });
-                            _saveRoomData();  // Firestore'a kaydet
+                            _saveRoomData();
                           },
                         ),
                       ),
@@ -237,7 +268,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                             setState(() {
                               isTvOn = value;
                             });
-                            _saveRoomData();  // Firestore'a kaydet
+                            _saveRoomData();
                           },
                         ),
                       ),
@@ -272,16 +303,16 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                     shrinkWrap: true,
                     children: [
                       ListTile(
-                        title: Text('Klima'),
+                        title: Text('Işık'),
                         onTap: () {
-                          addDevice('Klima');
+                          addDevice('Işık');
                           Navigator.pop(context);
                         },
                       ),
                       ListTile(
-                        title: Text('Işık'),
+                        title: Text('Klima'),
                         onTap: () {
-                          addDevice('Işık');
+                          addDevice('Klima');
                           Navigator.pop(context);
                         },
                       ),

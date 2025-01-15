@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Smart Home Dashboard'),
+        title: Text('Chakrapp'),
         actions: [
           Builder(
             builder: (context) {
