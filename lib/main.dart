@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';  // Firebase Core paketini ekleyin
 import 'screens/home_screen.dart';
 
-void main() {
-  runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();  // Uygulama başlatılmadan önce Firebase'i başlatmak için
+  try {
+    await Firebase.initializeApp();  // Firebase'i başlatın
+    runApp(MyApp());  // Başarıyla başlatıldıktan sonra uygulamayı çalıştır
+  } catch (e) {
+    runApp(ErrorApp(error: e.toString()));  // Firebase başlatılamazsa hata mesajını göster
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -33,6 +40,30 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: HomeScreen(),
+    );
+  }
+}
+
+class ErrorApp extends StatelessWidget {
+  final String error;
+
+  ErrorApp({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Firebase Error',
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Firebase Error'),
+        ),
+        body: Center(
+          child: Text(
+            'Firebase bağlantısı hatalı: $error',
+            style: TextStyle(fontSize: 16, color: Colors.red),
+          ),
+        ),
+      ),
     );
   }
 }

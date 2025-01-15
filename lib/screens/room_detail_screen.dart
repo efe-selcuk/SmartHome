@@ -18,8 +18,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool isTvOn = false;
   double? temperature;
   double? humidity;
-  double? lightIntensity = 50.0; // Işık yoğunluğu varsayalım
-  double? climaTemperature = 22.0; // Klima sıcaklık varsayalım
+  double lightIntensity = 50.0; // Işık yoğunluğu varsayalım
+  double climaTemperature = 22.0; // Klima sıcaklık varsayalım
   Color lightColor = Colors.white; // Işık rengi varsayalım
 
   // Cihazları eklemek için
@@ -52,7 +52,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             color: pickedColor,
             onColorChanged: (color) {
               setState(() {
-                lightColor = color;
+                lightColor = color;  // lightColor'u güncelle
               });
             },
             showColorCode: true, // Renk kodunu göster
@@ -62,7 +62,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             TextButton(
               onPressed: () {
                 setState(() {
-                  lightColor = pickedColor;
+                  lightColor = pickedColor;  // Seçilen rengi uygula
                 });
                 Navigator.of(context).pop();
               },
@@ -117,9 +117,9 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         title: Text('Klima'),
                         subtitle: Column(
                           children: [
-                            Text('Derece: ${climaTemperature?.toStringAsFixed(1)}°C'),
+                            Text('Derece: ${climaTemperature.toStringAsFixed(1)}°C'),
                             Slider(
-                              value: climaTemperature ?? 22.0,
+                              value: climaTemperature,
                               min: 16.0,
                               max: 30.0,
                               onChanged: (value) {
@@ -147,9 +147,17 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         title: Text('Işık'),
                         subtitle: Column(
                           children: [
-                            Text('Renk: ${lightColor.toString()}'),
+                            // Işık rengini yuvarlak bir kutuda göstermek için
+                            Container(
+                              height: 40, // Yuvarlak kutunun yüksekliği
+                              width: 40,  // Yuvarlak kutunun genişliği
+                              decoration: BoxDecoration(
+                                color: lightColor, // Seçilen renk kutuda görünecek
+                                shape: BoxShape.circle, // Yuvarlak şekil
+                              ),
+                            ),
                             Slider(
-                              value: lightIntensity ?? 50.0,
+                              value: lightIntensity,
                               min: 0.0,
                               max: 100.0,
                               onChanged: (value) {

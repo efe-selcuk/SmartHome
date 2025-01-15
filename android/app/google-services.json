@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "29845392321",
+    "project_id": "smarthome-d4085",
+    "storage_bucket": "smarthome-d4085.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29845392321:android:afbfebc02d1f58b79cfd40",
+        "android_client_info": {
+          "package_name": "com.example.smarthome"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA64hH2l1ZdY3KS-fL8OWAZLpTjB4-PeCw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
