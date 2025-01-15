@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore'u ekleyin
 import 'package:smarthome/screens/home_screen.dart';  // Giriş sonrası yönlendirilecek ekran
 
 class RegisterScreen extends StatefulWidget {
@@ -10,7 +11,10 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firstNameController = TextEditingController(); // İsim alanı
+  final _lastNameController = TextEditingController();  // Soyisim alanı
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Firestore örneği
 
   bool _isLoading = false;
 
@@ -20,12 +24,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
+      // Firebase Authentication ile kullanıcı oluşturma
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       if (userCredential.user != null) {
+        // Kullanıcı oluşturulduktan sonra, Firestore'a isim ve soyisim ekleyelim
+        await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          'firstName': _firstNameController.text.trim(),
+          'lastName': _lastNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'createdAt': Timestamp.now(), // Kaydın oluşturulma tarihi
+        });
+
+        // Başarılı bir şekilde kayıt olduktan sonra anasayfaya yönlendirme
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => HomeScreen()),
@@ -78,6 +92,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: Colors.red[900],
                 ),
                 SizedBox(height: 40),
+                // İsim giriş
+                TextField(
+                  controller: _firstNameController,
+                  decoration: InputDecoration(
+                    labelText: 'İsim',
+                    hintText: 'İsminizi girin',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                ),
+                SizedBox(height: 20),
+                // Soyisim giriş
+                TextField(
+                  controller: _lastNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Soyisim',
+                    hintText: 'Soyisminizi girin',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                ),
+                SizedBox(height: 20),
                 // E-posta giriş
                 TextField(
                   controller: _emailController,

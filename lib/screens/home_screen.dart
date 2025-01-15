@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smarthome/screens/room_detail_screen.dart';
-import 'package:smarthome/screens/login_screen.dart'; // Login ekranını eklemeyi unutmayın
-import 'package:smarthome/services/database_service.dart'; // DatabaseService'i ekleyin
+import 'package:smarthome/screens/login_screen.dart';
+import 'package:smarthome/services/database_service.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -18,9 +20,43 @@ class _HomeScreenState extends State<HomeScreen> {
     "Çocuk Odası",
   ];
 
-  final DatabaseService _databaseService = DatabaseService(); // DatabaseService örneği
+  final DatabaseService _databaseService = DatabaseService();
+  User? user;
+  String firstName = '';  // Ad
+  String lastName = '';   // Soyad
 
-  // Odaları Firebase'den yükle
+  // Firestore referansı
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Firebase Authentication'dan kullanıcıyı al
+  Future<void> loadUserData() async {
+    final FirebaseAuth _auth = FirebaseAuth.instance;
+    final currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      setState(() {
+        user = currentUser;
+      });
+      // Firestore'dan kullanıcı adı ve soyadını al
+      await fetchUserDetails(currentUser.uid);
+    }
+  }
+
+  // Firestore'dan kullanıcı bilgilerini al
+  Future<void> fetchUserDetails(String userId) async {
+    try {
+      DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        setState(() {
+          firstName = doc['firstName'] ?? 'Ad Bulunamadı';
+          lastName = doc['lastName'] ?? 'Soyad Bulunamadı';
+        });
+      }
+    } catch (e) {
+      print("Error fetching user details: $e");
+    }
+  }
+
+  // Firebase'den odaları yükle
   Future<void> loadRooms() async {
     List<String> loadedRooms = await _databaseService.loadRoomNames();
     setState(() {
@@ -28,12 +64,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Çıkış yapma işlemi
+  void logOut() {
+    FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
+  }
+
   // Oda ekleme işlemi
   void addRoom(String roomName) {
     setState(() {
       if (!rooms.contains(roomName)) {
         rooms.add(roomName);
-        _databaseService.saveRoomData(roomName, {}); // Firestore'a oda ekle
+        _databaseService.saveRoomData(roomName, {});
       }
     });
   }
@@ -48,35 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Yönlendirme işlemleri
-  void navigateTo(String routeName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text(routeName),
-          ),
-          body: Center(
-            child: Text('$routeName ekranı'),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Çıkış yapma işlemi
-  void logOut() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
-    loadRooms();  // Firebase'den odaları yükle
+    loadRooms();
+    loadUserData(); // Firebase'den kullanıcı verisini yükle
   }
 
   @override
@@ -90,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return IconButton(
                 icon: Icon(Icons.menu),
                 onPressed: () {
-                  Scaffold.of(context).openEndDrawer(); // Sağ tarafta menüyü açar
+                  Scaffold.of(context).openEndDrawer();
                 },
               );
             },
@@ -110,11 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundImage: AssetImage('assets/images/profile_placeholder.png'), // Profil resmi
+                    backgroundImage: AssetImage('assets/images/profile_placeholder.png'),
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Efe',
+                    '$firstName $lastName', // Ad Soyad
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -122,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Text(
-                    'efe@example.com',
+                    user != null ? user!.email ?? 'E-posta bulunamadı' : 'E-posta bulunamadı',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -155,9 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Merhaba mesajı
             Text(
-              'Merhaba, Efe',
+              'Merhaba, $firstName', // Ana ekranda sadece ad
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
@@ -166,8 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
             SizedBox(height: 20),
-
-            // Odalar başlığı ve odaların listesi
             Text(
               'Odalar',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -263,17 +281,34 @@ class _HomeScreenState extends State<HomeScreen> {
   IconData getRoomIcon(String roomName) {
     switch (roomName) {
       case 'Salon':
-        return Icons.tv; // Oturma odası ikonu
+        return Icons.tv;
       case 'Yatak Odası':
-        return Icons.bed; // Yatak ikonu
+        return Icons.bed;
       case 'Mutfak':
-        return Icons.kitchen; // Mutfak ikonu
+        return Icons.kitchen;
       case 'Banyo':
-        return Icons.bathtub; // Banyo ikonu
+        return Icons.bathtub;
       case 'Çocuk Odası':
-        return Icons.toys; // Çocuk odası ikonu
+        return Icons.toys;
       default:
-        return Icons.home; // Genel ev ikonu
+        return Icons.home;
     }
+  }
+
+  // Yönlendirme işlemi
+  void navigateTo(String routeName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(routeName),
+          ),
+          body: Center(
+            child: Text('$routeName ekranı'),
+          ),
+        ),
+      ),
+    );
   }
 }
