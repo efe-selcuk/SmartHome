@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smarthome/screens/room_detail_screen.dart';
 import 'package:smarthome/screens/login_screen.dart'; // Login ekranını eklemeyi unutmayın
+import 'package:smarthome/services/database_service.dart'; // DatabaseService'i ekleyin
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -17,14 +18,27 @@ class _HomeScreenState extends State<HomeScreen> {
     "Çocuk Odası",
   ];
 
+  final DatabaseService _databaseService = DatabaseService(); // DatabaseService örneği
+
+  // Odaları Firebase'den yükle
+  Future<void> loadRooms() async {
+    List<String> loadedRooms = await _databaseService.loadRoomNames();
+    setState(() {
+      rooms = loadedRooms;
+    });
+  }
+
+  // Oda ekleme işlemi
   void addRoom(String roomName) {
     setState(() {
       if (!rooms.contains(roomName)) {
         rooms.add(roomName);
+        _databaseService.saveRoomData(roomName, {}); // Firestore'a oda ekle
       }
     });
   }
 
+  // Oda detaylarına yönlendirme
   void navigateToRoomDetails(String roomName) {
     Navigator.push(
       context,
@@ -34,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Yönlendirme işlemleri
   void navigateTo(String routeName) {
-    // Yönlendirme işlemleri (Örneğin: Profil, Ayarlar)
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -51,12 +65,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Çıkış yapma işlemi
   void logOut() {
-    // Çıkış yapıldığında login ekranına yönlendirme
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginScreen()),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadRooms();  // Firebase'den odaları yükle
   }
 
   @override

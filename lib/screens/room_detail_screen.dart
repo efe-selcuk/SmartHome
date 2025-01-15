@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flex_color_picker/flex_color_picker.dart'; // Renk Seçici
 import 'package:smarthome/services/sensor_service.dart'; // SensorService'i import ettik
+import 'package:smarthome/services/database_service.dart'; // DatabaseService'i import ettik
 
 class RoomDetailsScreen extends StatefulWidget {
   final String roomName;
@@ -22,6 +23,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   double climaTemperature = 22.0; // Klima sıcaklık varsayalım
   Color lightColor = Colors.white; // Işık rengi varsayalım
 
+  final DatabaseService _databaseService = DatabaseService(); // DatabaseService örneği
+
   // Cihazları eklemek için
   void addDevice(String deviceName) {
     setState(() {
@@ -29,6 +32,24 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         devices.add(deviceName);
       }
     });
+    _saveRoomData();  // Firestore'a kaydet
+  }
+
+  // Firestore'a veri kaydetme
+  Future<void> _saveRoomData() async {
+    Map<String, dynamic> data = {
+      'roomName': widget.roomName,
+      'devices': devices,
+      'lightColor': lightColor.value.toString(),
+      'climaTemp': climaTemperature,
+      'lightIntensity': lightIntensity,
+      'isClimaOn': isClimaOn,
+      'isLightOn': isLightOn,
+      'isTvOn': isTvOn,
+      'temperature': temperature,
+      'humidity': humidity,
+    };
+    await _databaseService.saveRoomData(widget.roomName, data);  // DatabaseService ile Firestore'a kaydet
   }
 
   // Sıcaklık ve nem verilerini çekme
@@ -54,6 +75,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
               setState(() {
                 lightColor = color;  // lightColor'u güncelle
               });
+              _saveRoomData();  // Firestore'a kaydet
             },
             showColorCode: true, // Renk kodunu göster
             wheelDiameter: 250, // Renk çarkı çapı
@@ -61,9 +83,6 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                setState(() {
-                  lightColor = pickedColor;  // Seçilen rengi uygula
-                });
                 Navigator.of(context).pop();
               },
               child: Text("Tamam"),
@@ -84,6 +103,28 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   void initState() {
     super.initState();
     fetchSensorData();  // İlk olarak sıcaklık ve nem verilerini al
+    _loadRoomData();  // Verileri Firestore'dan yükle
+  }
+
+  // Firestore'dan odadaki verileri yükleme
+  Future<void> _loadRoomData() async {
+    Map<String, dynamic>? roomData = await _databaseService.loadRoomData(widget.roomName);
+
+    if (roomData != null) {
+      setState(() {
+        devices = List<String>.from(roomData['devices'] ?? []);
+        lightColor = Color(int.parse(roomData['lightColor'])); // Renk bilgisini al
+        climaTemperature = roomData['climaTemp'];
+        lightIntensity = roomData['lightIntensity'];
+        isClimaOn = roomData['isClimaOn'];
+        isLightOn = roomData['isLightOn'];
+        isTvOn = roomData['isTvOn'];
+        temperature = roomData['temperature'];
+        humidity = roomData['humidity'];
+      });
+    } else {
+      print("Oda verisi bulunamadı.");
+    }
   }
 
   @override
@@ -102,7 +143,6 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
-
             // Cihazlar listesi
             devices.isEmpty
                 ? Center(child: Text('Henüz cihaz eklenmemiş.'))
@@ -126,6 +166,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                                 setState(() {
                                   climaTemperature = value;
                                 });
+                                _saveRoomData();  // Firestore'a kaydet
                               },
                             ),
                           ],
@@ -136,6 +177,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                             setState(() {
                               isClimaOn = value;
                             });
+                            _saveRoomData();  // Firestore'a kaydet
                           },
                         ),
                       ),
@@ -164,6 +206,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                                 setState(() {
                                   lightIntensity = value;
                                 });
+                                _saveRoomData();  // Firestore'a kaydet
                               },
                             ),
                             ElevatedButton(
@@ -178,6 +221,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                             setState(() {
                               isLightOn = value;
                             });
+                            _saveRoomData();  // Firestore'a kaydet
                           },
                         ),
                       ),
@@ -193,6 +237,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                             setState(() {
                               isTvOn = value;
                             });
+                            _saveRoomData();  // Firestore'a kaydet
                           },
                         ),
                       ),
