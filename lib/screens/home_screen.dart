@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smarthome/screens/room_detail_screen.dart';
+import 'package:smarthome/screens/login_screen.dart'; // Login ekranını eklemeyi unutmayın
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -33,11 +34,101 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void navigateTo(String routeName) {
+    // Yönlendirme işlemleri (Örneğin: Profil, Ayarlar)
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(routeName),
+          ),
+          body: Center(
+            child: Text('$routeName ekranı'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void logOut() {
+    // Çıkış yapıldığında login ekranına yönlendirme
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Smart Home Dashboard'),
+        actions: [
+          Builder(
+            builder: (context) {
+              return IconButton(
+                icon: Icon(Icons.menu),
+                onPressed: () {
+                  Scaffold.of(context).openEndDrawer(); // Sağ tarafta menüyü açar
+                },
+              );
+            },
+          ),
+        ],
+      ),
+      endDrawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.red[900],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundImage: AssetImage('assets/images/profile_placeholder.png'), // Profil resmi
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Efe',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'efe@example.com',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text('Profil'),
+              onTap: () => navigateTo('Profil'),
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Ayarlar'),
+              onTap: () => navigateTo('Ayarlar'),
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: Text('Çıkış Yap'),
+              onTap: logOut,
+            ),
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
