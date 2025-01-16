@@ -84,6 +84,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Oda silme işlemi
+  void deleteRoom(String roomName) {
+    setState(() {
+      rooms.remove(roomName);
+    });
+    _databaseService.deleteRoomData(roomName);
+  }
+
   // Oda detaylarına yönlendirme
   void navigateToRoomDetails(String roomName) {
     Navigator.push(
@@ -207,6 +215,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   final room = rooms[index];
                   return GestureDetector(
                     onTap: () => navigateToRoomDetails(room),
+                    onLongPress: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text('Oda Sil'),
+                            content: Text('$room odasını silmek istiyor musunuz?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: Text('İptal'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  deleteRoom(room);
+                                  Navigator.pop(context);
+                                },
+                                child: Text('Sil'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
                     child: Card(
                       elevation: 5,
                       shape: RoundedRectangleBorder(

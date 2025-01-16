@@ -47,7 +47,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       'climaTemp': climaTemperature,
       'lightIntensity': lightIntensity,
       'isClimaOn': isClimaOn,
-      'isLightOn': isLightOn,  // Işık durumu, switch’e bağlı olarak
+      'isLightOn': isLightOn,  // Işık durumu, switch'e bağlı olarak
       'isTvOn': isTvOn,
       'temperature': temperature,
       'humidity': humidity,
@@ -152,11 +152,12 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     }
   }
 
-  // Işık açma/kapatma (Her oda için ayrı ışık kontrolü yapılacak)
-  Future<void> _controlLight(int room, bool isOn) async {
+  // Işık açma/kapatma
+  Future<void> _controlLight(bool isOn) async {
     setState(() {
       isLightOn = isOn;
     });
+    int room = 1;  // Odanın numarasını burada belirtin, örneğin 1. oda
     await SensorService.controlLight(room, isOn);  // ESP32'ye ışığı açma/kapama komutu gönder
     _saveRoomData();  // Veriyi kaydet
   }
@@ -219,18 +220,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         trailing: Switch(
                           value: isLightOn,
                           onChanged: (value) {
-                            // Işığı açma veya kapama (Her oda için kontrol sağlanacak)
-                            if (widget.roomName == 'Mutfak') {
-                              _controlLight(3, value);  // Mutfak ışığını kontrol et
-                            } else if (widget.roomName == 'Salon') {
-                              _controlLight(1, value);  // Salon ışığını kontrol et
-                            } else if (widget.roomName == 'Yatak Odası') {
-                              _controlLight(2, value);  // Yatak odası ışığını kontrol et
-                            } else if (widget.roomName == 'Banyo') {
-                              _controlLight(4, value);  // Banyo ışığını kontrol et
-                            } else {
-                              _controlLight(5, value);  // Diğer odalar için kontrol et
-                            }
+                            // Işığı açma veya kapama
+                            _controlLight(value);
                           },
                         ),
                       ),

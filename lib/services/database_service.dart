@@ -81,4 +81,25 @@ class DatabaseService {
       return [];
     }
   }
+
+  // Odayı silme metodu
+  Future<void> deleteRoomData(String roomName) async {
+    try {
+      String userId = currentUserId;
+      if (userId.isEmpty) {
+        print("Kullanıcı kimliği mevcut değil!");
+        return;
+      }
+
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('rooms')
+          .doc(roomName)
+          .delete();
+      print("Oda silindi: $roomName");
+    } catch (e) {
+      print("Odayı silerken hata oluştu: $e");
+    }
+  }
 }

@@ -39,10 +39,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'createdAt': Timestamp.now(), // Kaydın oluşturulma tarihi
         });
 
-        // Başarılı bir şekilde kayıt olduktan sonra anasayfaya yönlendirme
-        Navigator.pushReplacement(
+        // Başarılı bir şekilde kayıt olduktan sonra anasayfaya yönlendirme ve önceki ekranları temizleme
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => HomeScreen()),
+              (Route<dynamic> route) => false, // Bu satır önceki tüm ekranları temizler
         );
       }
     } catch (e) {
@@ -74,9 +75,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Kayıt Ol'),
+        title: Row(
+          children: [
+            Icon(Icons.home, size: 30, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Kayıt Ol'),
+          ],
+        ),
         centerTitle: true,
         backgroundColor: Colors.red[900],
+        elevation: 0,
+        bottom: PreferredSize(
+          child: Container(
+            color: Colors.white,
+            height: 1,
+          ),
+          preferredSize: Size.fromHeight(1),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -85,64 +100,123 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo veya resim eklenebilir
-                Icon(
-                  Icons.home,
-                  size: 100,
-                  color: Colors.red[900],
+                // Logo veya resim ekleyelim
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(50),
+                    color: Colors.red[900]!.withOpacity(0.1),
+                  ),
+                  child: Icon(
+                    Icons.home,
+                    size: 100,
+                    color: Colors.red[900],
+                  ),
                 ),
                 SizedBox(height: 40),
                 // İsim giriş
-                TextField(
-                  controller: _firstNameController,
-                  decoration: InputDecoration(
-                    labelText: 'İsim',
-                    hintText: 'İsminizi girin',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _firstNameController,
+                    decoration: InputDecoration(
+                      labelText: 'İsim',
+                      hintText: 'İsminizi girin',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person, color: Colors.red[900]),
+                    ),
                   ),
                 ),
                 SizedBox(height: 20),
                 // Soyisim giriş
-                TextField(
-                  controller: _lastNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Soyisim',
-                    hintText: 'Soyisminizi girin',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _lastNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Soyisim',
+                      hintText: 'Soyisminizi girin',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person, color: Colors.red[900]),
+                    ),
                   ),
                 ),
                 SizedBox(height: 20),
                 // E-posta giriş
-                TextField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'E-posta',
-                    hintText: 'E-posta adresinizi girin',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  keyboardType: TextInputType.emailAddress,
+                  child: TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: 'E-posta',
+                      hintText: 'E-posta adresinizi girin',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email, color: Colors.red[900]),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                 ),
                 SizedBox(height: 20),
                 // Şifre giriş
-                TextField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Şifre',
-                    hintText: 'Şifrenizi girin',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  obscureText: true,
+                  child: TextField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Şifre',
+                      hintText: 'Şifrenizi girin',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock, color: Colors.red[900]),
+                    ),
+                    obscureText: true,
+                  ),
                 ),
                 SizedBox(height: 20),
                 // Kayıt ol butonu
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[300],
+                    backgroundColor: Colors.red[400],
                     padding: EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

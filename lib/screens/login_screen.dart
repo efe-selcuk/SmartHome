@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:smarthome/screens/home_screen.dart'; // HomeScreen import edildi
-import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // FontAwesomeIcons import edildi
-import 'package:smarthome/screens/register_screen.dart'; // RegisterScreen dosyasını import et
-
+import 'package:smarthome/screens/home_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smarthome/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -63,9 +62,23 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Smart Home Giriş'),
+        title: Row(
+          children: [
+            Icon(Icons.home, size: 30, color: Colors.white),
+            SizedBox(width: 10),
+            Text('Smart Home Giriş'),
+          ],
+        ),
         centerTitle: true,
         backgroundColor: Colors.red[900],
+        elevation: 0,
+        bottom: PreferredSize(
+          child: Container(
+            color: Colors.white,
+            height: 1,
+          ),
+          preferredSize: Size.fromHeight(1),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -74,38 +87,75 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.home,
-                  size: 100,
-                  color: Colors.red[900],
+                // Logo ekleyelim
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(50),
+                    color: Colors.red[900]!.withOpacity(0.1),
+                  ),
+                  child: Icon(
+                    Icons.home,
+                    size: 100,
+                    color: Colors.red[900],
+                  ),
                 ),
                 SizedBox(height: 40),
-                TextField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'E-posta',
-                    hintText: 'E-posta adresinizi girin',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
+                // E-posta alanı
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  keyboardType: TextInputType.emailAddress,
+                  child: TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: 'E-posta',
+                      hintText: 'E-posta adresinizi girin',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email, color: Colors.red[900]),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                 ),
                 SizedBox(height: 20),
-                TextField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Şifre',
-                    hintText: 'Şifrenizi girin',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
+                // Şifre alanı
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  obscureText: true,
+                  child: TextField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Şifre',
+                      hintText: 'Şifrenizi girin',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock, color: Colors.red[900]),
+                    ),
+                    obscureText: true,
+                  ),
                 ),
                 SizedBox(height: 20),
+                // Giriş butonu
                 ElevatedButton(
                   onPressed: _isLoading ? null : _signIn,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[300],
+                    backgroundColor: Colors.red[400],
                     padding: EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -120,21 +170,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 SizedBox(height: 20),
+                // Sosyal medya giriş butonları
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    IconButton(
-                      icon: Icon(FontAwesomeIcons.facebook, color: Colors.blue[800]),
-                      onPressed: () {},
+                    // Facebook butonu
+                    GestureDetector(
+                      onTap: () {
+                        // Facebook login işlevi
+                      },
+                      child: CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Colors.blue[800],
+                        child: Icon(FontAwesomeIcons.facebook, color: Colors.white),
+                      ),
                     ),
                     SizedBox(width: 20),
-                    IconButton(
-                      icon: Icon(FontAwesomeIcons.google, color: Colors.red),
-                      onPressed: () {},
+                    // Google butonu
+                    GestureDetector(
+                      onTap: () {
+                        // Google login işlevi
+                      },
+                      child: CircleAvatar(
+                        radius: 25,
+                        backgroundColor: Colors.red,
+                        child: Icon(FontAwesomeIcons.google, color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
                 SizedBox(height: 20),
+                // Kayıt ol linki
                 TextButton(
                   onPressed: () {
                     // Kayıt olma ekranına yönlendirme
