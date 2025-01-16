@@ -4,19 +4,34 @@ import 'dart:async';
 
 class SensorService {
   static const String apiUrl = 'http://192.168.1.8'; // ESP32'nin IP adresi
-  static Timer? _timer; // Sıcaklık ve nem verilerini periyodik olarak güncellemek için Timer
+
+  // Her odanın GPIO pinini belirleyelim
+  static const Map<int, String> roomEndpoints = {
+    1: '/room1/light',
+    2: '/room2/light',
+    3: '/room3/light',
+    4: '/room4/light',
+    5: '/room5/light',
+  };
+
+  // Periyodik veri güncelleme
+  static void startPeriodicUpdates(Function(Map<String, double>) onDataReceived) {
+    Timer.periodic(Duration(seconds: 5), (timer) async {
+      Map<String, double> sensorData = await fetchSensorData();
+      onDataReceived(sensorData);
+    });
+  }
 
   // Sıcaklık ve nem verilerini al
   static Future<Map<String, double>> fetchSensorData() async {
     try {
-      final response = await http.get(Uri.parse(apiUrl));
+      final response = await http.get(Uri.parse('$apiUrl/'));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         double temperature = data['temperature']?.toDouble() ?? 0.0;
         double humidity = data['humidity']?.toDouble() ?? 0.0;
 
-        print('Sıcaklık: $temperature, Nem: $humidity');
         return {
           'temperature': temperature,
           'humidity': humidity,
@@ -25,37 +40,47 @@ class SensorService {
         throw Exception('Veri alınamadı');
       }
     } catch (e) {
-      print('Hata: $e');
       return {'temperature': 0.0, 'humidity': 0.0};
     }
   }
 
-  // Periyodik veri güncelleme
-  static void startPeriodicUpdates(Function(Map<String, double>) onDataReceived) {
-    _timer?.cancel(); // Önceki zamanlayıcıyı iptal et
-    _timer = Timer.periodic(Duration(seconds: 5), (timer) async {
-      Map<String, double> sensorData = await fetchSensorData();
-      onDataReceived(sensorData);
-    });
-  }
-
-  // LED'i açma veya kapama
-  static Future<void> controlLight(bool isOn) async {
-    try {
-      final response = await http.get(Uri.parse('$apiUrl/light?status=${isOn ? "on" : "off"}'));
+  // Oda ışığını açma veya kapama
+  static Future<void> controlLight(int room, bool isOn) async {
+    final endpoint = roomEndpoints[room];
+    if (endpoint != null) {
+      final response = await http.get(Uri.parse('$apiUrl$endpoint?status=${isOn ? "on" : "off"}'));
 
       if (response.statusCode == 200) {
-        print('Işık ${isOn ? "açıldı" : "kapandı"}');
+        print('Oda $room ışığı ${isOn ? "açıldı" : "kapandı"}');
       } else {
-        throw Exception('Işık kontrol edilemedi');
+        print('Işık kontrol edilemedi');
       }
-    } catch (e) {
-      print('Hata: $e');
+    } else {
+      print('Oda numarası hatalı.');
     }
   }
 
-  // Zamanlayıcıyı durdur
-  static void stopPeriodicUpdates() {
-    _timer?.cancel();
+  // Oda sıcaklık değerini ayarla (Klima için örnek)
+  static Future<void> controlClima(int room, double temperature) async {
+    final endpoint = '/room$room/clima';
+    final response = await http.get(Uri.parse('$apiUrl$endpoint?temperature=$temperature'));
+
+    if (response.statusCode == 200) {
+      print('Oda $room kliması ${temperature.toStringAsFixed(1)}°C\'ye ayarlandı');
+    } else {
+      print('Klima kontrol edilemedi');
+    }
+  }
+
+  // Oda ışık rengini ayarlama
+  static Future<void> controlLightColor(int room, int colorValue) async {
+    final endpoint = '/room$room/light/color';
+    final response = await http.get(Uri.parse('$apiUrl$endpoint?color=$colorValue'));
+
+    if (response.statusCode == 200) {
+      print('Oda $room ışık rengi ayarlandı');
+    } else {
+      print('Işık rengi ayarlanamadı');
+    }
   }
 }

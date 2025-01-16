@@ -17,7 +17,7 @@ class RoomDetailsScreen extends StatefulWidget {
 class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   List<String> devices = [];
   bool isClimaOn = false;
-  bool isLightOn = false; // Işık durumunu takip etmek için
+  bool isLightOn = false; // Işık durumu sadece switch ile kontrol edilecek
   bool isTvOn = false;
   double? temperature;
   double? humidity;
@@ -47,7 +47,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       'climaTemp': climaTemperature,
       'lightIntensity': lightIntensity,
       'isClimaOn': isClimaOn,
-      'isLightOn': isLightOn,  // Işık durumu
+      'isLightOn': isLightOn,  // Işık durumu, switch’e bağlı olarak
       'isTvOn': isTvOn,
       'temperature': temperature,
       'humidity': humidity,
@@ -138,11 +138,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     if (roomData != null) {
       setState(() {
         devices = List<String>.from(roomData['devices'] ?? []);
-        lightColor = Color(int.parse(roomData['lightColor']));
+        lightColor = Color(int.parse(roomData['lightColor'] ?? '0'));
         climaTemperature = roomData['climaTemp'];
         lightIntensity = roomData['lightIntensity'];
         isClimaOn = roomData['isClimaOn'];
-        isLightOn = roomData['isLightOn'];  // Işık durumu
+        isLightOn = roomData['isLightOn'] ?? false;  // Işık durumu, eğer belirtilmediyse false
         isTvOn = roomData['isTvOn'];
         temperature = roomData['temperature'];
         humidity = roomData['humidity'];
@@ -152,12 +152,12 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     }
   }
 
-  // Işık açma/kapatma
-  Future<void> _controlLight(bool isOn) async {
+  // Işık açma/kapatma (Her oda için ayrı ışık kontrolü yapılacak)
+  Future<void> _controlLight(int room, bool isOn) async {
     setState(() {
       isLightOn = isOn;
     });
-    await SensorService.controlLight(isOn);  // ESP32'ye ışığı açma/kapama komutu gönder
+    await SensorService.controlLight(room, isOn);  // ESP32'ye ışığı açma/kapama komutu gönder
     _saveRoomData();  // Veriyi kaydet
   }
 
@@ -219,8 +219,18 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         trailing: Switch(
                           value: isLightOn,
                           onChanged: (value) {
-                            // Işığı açma veya kapama
-                            _controlLight(value);
+                            // Işığı açma veya kapama (Her oda için kontrol sağlanacak)
+                            if (widget.roomName == 'Mutfak') {
+                              _controlLight(3, value);  // Mutfak ışığını kontrol et
+                            } else if (widget.roomName == 'Salon') {
+                              _controlLight(1, value);  // Salon ışığını kontrol et
+                            } else if (widget.roomName == 'Yatak Odası') {
+                              _controlLight(2, value);  // Yatak odası ışığını kontrol et
+                            } else if (widget.roomName == 'Banyo') {
+                              _controlLight(4, value);  // Banyo ışığını kontrol et
+                            } else {
+                              _controlLight(5, value);  // Diğer odalar için kontrol et
+                            }
                           },
                         ),
                       ),
@@ -327,21 +337,12 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         title: Text('Sıcaklık & Nem'),
                         onTap: () {
                           addDevice('Sıcaklık & Nem');
-                          fetchSensorData();
                           Navigator.pop(context);
                         },
                       ),
                     ],
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: Text('Kapat'),
-                  ),
-                ],
               );
             },
           );

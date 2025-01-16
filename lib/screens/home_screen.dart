@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smarthome/screens/room_detail_screen.dart';
 import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
+import 'package:smarthome/services/sensor_service.dart'; // SensorService'yi ekledik
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -255,6 +256,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: Text(room),
                         onTap: () {
                           addRoom(room);
+                          // Oda ekledikten sonra ışığı açmak
+                          int roomNumber = predefinedRooms.indexOf(room) + 1;
+                          SensorService.controlLight(roomNumber, true); // Işık açılıyor
                           Navigator.pop(context);
                         },
                       );
