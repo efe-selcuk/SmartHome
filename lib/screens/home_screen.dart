@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:location/location.dart'; // geolocator yerine location import ediyoruz
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:smarthome/screens/room_detail_screen.dart';
 import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
-import 'package:smarthome/services/sensor_service.dart'; // SensorService'yi ekledik
+import 'package:smarthome/services/sensor_service.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -23,13 +26,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final DatabaseService _databaseService = DatabaseService();
   User? user;
-  String firstName = '';  // Ad
-  String lastName = '';   // Soyad
+  String firstName = '';
+  String lastName = '';
 
-  // Firestore referansı
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Firebase Authentication'dan kullanıcıyı al
+  String temperature = '--';
+  String weatherDescription = '--';
+
+  // location paketi ile kullanıcı verilerini yükleme
   Future<void> loadUserData() async {
     final FirebaseAuth _auth = FirebaseAuth.instance;
     final currentUser = _auth.currentUser;
@@ -37,12 +42,10 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         user = currentUser;
       });
-      // Firestore'dan kullanıcı adı ve soyadını al
       await fetchUserDetails(currentUser.uid);
     }
   }
 
-  // Firestore'dan kullanıcı bilgilerini al
   Future<void> fetchUserDetails(String userId) async {
     try {
       DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
@@ -57,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Firebase'den odaları yükle
   Future<void> loadRooms() async {
     List<String> loadedRooms = await _databaseService.loadRoomNames();
     setState(() {
@@ -65,7 +67,63 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Çıkış yapma işlemi
+  // Konum iznini kontrol et ve konum verisini al
+  Future<void> getUserLocation() async {
+    Location location = Location();
+
+    bool serviceEnabled;
+    PermissionStatus permission;
+
+    // Konum servislerinin etkin olup olmadığını kontrol et
+    serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        print("Konum servisi kapalı. Lütfen etkinleştirin.");
+        return;
+      }
+    }
+
+    // Konum izni kontrolü
+    permission = await location.hasPermission();
+    if (permission == PermissionStatus.denied) {
+      permission = await location.requestPermission();
+      if (permission == PermissionStatus.denied) {
+        print("Konum izni reddedildi. Lütfen izni verin.");
+        return;
+      }
+    }
+
+    if (permission == PermissionStatus.deniedForever) {
+      print("Konum izni kalıcı olarak reddedildi. Uygulama ayarlarına gidin.");
+      return;
+    }
+
+    // Konum verisini al
+    try {
+      LocationData locationData = await location.getLocation();
+      print('Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
+      getWeatherData(locationData.latitude!, locationData.longitude!);
+    } catch (e) {
+      print('Konum alırken hata oluştu: $e');
+    }
+  }
+
+  Future<void> getWeatherData(double latitude, double longitude) async {
+    final String url = "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=b265ec116d325a1b81af0bc0f5d3b50e&units=metric";
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      var data = json.decode(response.body);
+      setState(() {
+        temperature = data['main']['temp'].toString();
+        weatherDescription = data['weather'][0]['description'];
+      });
+    } else {
+      throw Exception('Hava durumu verisi alınamadı');
+    }
+  }
+
   void logOut() {
     FirebaseAuth.instance.signOut();
     Navigator.pushReplacement(
@@ -74,7 +132,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Oda ekleme işlemi
+  @override
+  void initState() {
+    super.initState();
+    loadRooms();
+    loadUserData();
+    getUserLocation();
+  }
+
   void addRoom(String roomName) {
     setState(() {
       if (!rooms.contains(roomName)) {
@@ -84,29 +149,27 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Oda silme işlemi
+  void navigateTo(String routeName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(routeName),
+          ),
+          body: Center(
+            child: Text('$routeName ekranı'),
+          ),
+        ),
+      ),
+    );
+  }
+
   void deleteRoom(String roomName) {
     setState(() {
       rooms.remove(roomName);
     });
     _databaseService.deleteRoomData(roomName);
-  }
-
-  // Oda detaylarına yönlendirme
-  void navigateToRoomDetails(String roomName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RoomDetailsScreen(roomName: roomName),
-      ),
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    loadRooms();
-    loadUserData(); // Firebase'den kullanıcı verisini yükle
   }
 
   @override
@@ -144,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    '$firstName $lastName', // Ad Soyad
+                    '$firstName $lastName',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -186,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Merhaba, $firstName', // Ana ekranda sadece ad
+              'Merhaba, $firstName',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
@@ -200,6 +263,36 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
+            Container(
+              padding: EdgeInsets.all(16.0),
+              margin: EdgeInsets.only(bottom: 20.0),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 5,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Sıcaklık: $temperature°C',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Hava Durumu: $weatherDescription',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: rooms.isEmpty
                   ? Center(child: Text('Henüz oda eklenmemiş.'))
@@ -290,7 +383,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: Text(room),
                         onTap: () {
                           addRoom(room);
-                          // Oda ekledikten sonra ışığı açmak
                           int roomNumber = predefinedRooms.indexOf(room) + 1;
                           SensorService.controlLight(roomNumber, true); // Işık açılıyor
                           Navigator.pop(context);
@@ -333,19 +425,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Yönlendirme işlemi
-  void navigateTo(String routeName) {
+  void navigateToRoomDetails(String roomName) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text(routeName),
-          ),
-          body: Center(
-            child: Text('$routeName ekranı'),
-          ),
-        ),
+        builder: (context) => RoomDetailsScreen(roomName: roomName),
       ),
     );
   }

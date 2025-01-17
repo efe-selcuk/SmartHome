@@ -6,8 +6,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.smarthome"
-    compileSdk = flutter.compileSdkVersion
+    namespace = "com.example.smarthome"  // Uygulama ismini buraya yazın
+    compileSdk = 34
+
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -22,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.example.smarthome"  // Uygulama ID'nizi buraya yazın
         minSdkVersion 23  // Firebase için minimum SDK 23 olmalı
-        targetSdkVersion flutter.targetSdkVersion
+        targetSdkVersion 34
         versionCode flutter.versionCode
         versionName flutter.versionName
     }
@@ -33,22 +34,18 @@ android {
         }
     }
 
-    // Firebase için Google servisi yapılandırması
     buildFeatures {
-        viewBinding true
+        viewBinding true  // ViewBinding'i etkinleştiriyoruz
     }
 }
 
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:31.0.0')  // Firebase BOM kullanarak sürüm uyumluluğunu yönetin
-    implementation 'com.google.firebase:firebase-analytics'  // Firebase Analytics (isteğe bağlı, kullanıyorsanız ekleyin)
-    implementation 'com.google.firebase:firebase-auth'      // Firebase Authentication (isteğe bağlı, kullanıyorsanız ekleyin)
-    implementation 'com.google.firebase:firebase-firestore'  // Firebase Firestore (isteğe bağlı, kullanıyorsanız ekleyin)
-    // Firebase ve diğer bağımlılıklarınız
+    implementation 'com.google.firebase:firebase-analytics'  // Firebase Analytics (isteğe bağlı)
+    implementation 'com.google.firebase:firebase-auth'      // Firebase Authentication
+    implementation 'com.google.firebase:firebase-firestore'  // Firebase Firestore
+    implementation 'com.google.android.gms:play-services-location:18.0.0'  // Konum servisleri için bu kütüphane eklenmeli
+    implementation 'com.google.android.gms:play-services-maps:18.0.0'      // Harita ve konum bilgisi için (isteğe bağlı)
 }
 
 apply plugin: 'com.google.gms.google-services'  // Firebase servislerinin çalışabilmesi için
-
-flutter {
-    source = "../.."
-}

@@ -1,22 +1,22 @@
 buildscript {
     repositories {
         google()  // Firebase ve Google servisleri için
-        mavenCentral()
+        mavenCentral()  // Maven Central repository
     }
     dependencies {
-        // Diğer bağımlılıklar
+        // Android Gradle plugin ve Kotlin plugin
         classpath 'com.android.tools.build:gradle:7.0.4'  // Bu versiyonlar projenize uygun olmalıdır
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.21'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.21'  // Kotlin Gradle plugin
 
         // Firebase için gerekli olan Google Services plugin'i
-        classpath 'com.google.gms:google-services:4.3.15'  // Bu satır eklenmeli
+        classpath 'com.google.gms:google-services:4.3.15'  // Firebase ve Google servisleri için
     }
 }
 
 allprojects {
     repositories {
         google()  // Firebase ve Google servisleri için
-        mavenCentral()
+        mavenCentral()  // Maven Central repository
     }
 }
 
@@ -26,9 +26,9 @@ subprojects {
 }
 
 subprojects {
-    project.evaluationDependsOn(":app")
+    project.evaluationDependsOn(":app")  // Uygulama modülüne bağımlılık eklenmesi için
 }
 
 tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    delete rootProject.buildDir  // Temizleme işlemi
 }
