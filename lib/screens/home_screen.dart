@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:location/location.dart'; // geolocator yerine location import ediyoruz
+import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:smarthome/screens/room_detail_screen.dart';
 import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/services/sensor_service.dart';
+import 'package:smarthome/screens/security_screen.dart'; // Import the security screen
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -289,6 +290,42 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     'Hava Durumu: $weatherDescription',
                     style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            // New Security Section
+            Container(
+              padding: EdgeInsets.all(16.0),
+              margin: EdgeInsets.only(bottom: 20.0),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 5,
+                    blurRadius: 7,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.security),
+                    title: Text(
+                      'Güvenlik Sistemi',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    onTap: () {
+                      // Navigate to the security screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SecurityScreen()),
+                      );
+                    },
                   ),
                 ],
               ),
