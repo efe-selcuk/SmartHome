@@ -7,8 +7,8 @@ class SecurityScreen extends StatefulWidget {
 }
 
 class _SecurityScreenState extends State<SecurityScreen> {
-  String esp32CamUrl = "http://192.168.1.100/"; // ESP32-CAM cihazının IP adresi
-  String imageUrl = "";
+  String esp32CamUrl = "http://192.168.1.10/"; // ESP32-CAM cihazının IP adresi
+  String imageUrl = ""; // Görüntü URL'si burada saklanacak
 
   // Fotoğraf çek ve URL'yi güncelle
   Future<void> fetchImage() async {
@@ -17,7 +17,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
       if (response.statusCode == 200) {
         setState(() {
-          imageUrl = esp32CamUrl; // Çekilen fotoğrafın URL'si güncelleniyor
+          // Yeni bir görüntü URL'si oluşturuyoruz
+          imageUrl = esp32CamUrl + "?t=${DateTime.now().millisecondsSinceEpoch}";
         });
       } else {
         print("ESP32-CAM bağlantı hatası: ${response.statusCode}");
@@ -93,7 +94,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: fetchImage,
+        onPressed: fetchImage, // Fotoğrafı yenilemek için buton
         child: Icon(Icons.refresh),
       ),
     );
