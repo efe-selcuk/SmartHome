@@ -1,5 +1,7 @@
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class SecurityScreen extends StatefulWidget {
   @override
@@ -7,95 +9,185 @@ class SecurityScreen extends StatefulWidget {
 }
 
 class _SecurityScreenState extends State<SecurityScreen> {
-  String esp32CamUrl = "http://192.168.1.10/"; // ESP32-CAM cihazının IP adresi
-  String imageUrl = ""; // Görüntü URL'si burada saklanacak
+  final String socketUrl = 'ws://192.168.1.10:81';
+  late WebSocketChannel _channel;
+  late StreamSubscription _webSocketSubscription;
+  late StreamController<List<int>> _streamController;
+  bool isLiveStreaming = false;
+  int lastFrameTime = 0;
+  List<Uint8List> capturedImages = [];
+  List<int> currentImageData = []; // To store the current image for fullscreen
 
-  // Fotoğraf çek ve URL'yi güncelle
-  Future<void> fetchImage() async {
-    try {
-      final response = await http.get(Uri.parse(esp32CamUrl)); // HTTP GET isteği gönder
+  @override
+  void initState() {
+    super.initState();
+    _streamController = StreamController<List<int>>();
+  }
 
-      if (response.statusCode == 200) {
-        setState(() {
-          // Yeni bir görüntü URL'si oluşturuyoruz
-          imageUrl = esp32CamUrl + "?t=${DateTime.now().millisecondsSinceEpoch}";
-        });
-      } else {
-        print("ESP32-CAM bağlantı hatası: ${response.statusCode}");
-        showError("ESP32-CAM bağlantı hatası: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Hata oluştu: $e");
-      showError("ESP32-CAM bağlantısı başarısız.");
+  void _connectToWebSocket() {
+    _channel = WebSocketChannel.connect(Uri.parse(socketUrl));
+    _webSocketSubscription = _channel.stream.listen(_onDataReceived);
+    setState(() {
+      isLiveStreaming = true;
+    });
+  }
+
+  void _onDataReceived(dynamic data) {
+    int currentTime = DateTime.now().millisecondsSinceEpoch;
+    if (currentTime - lastFrameTime < 1000 / 15 + 120) return;
+    lastFrameTime = currentTime;
+    List<int> byteData = List<int>.from(data);
+    if (isValidImage(byteData)) {
+      currentImageData = byteData; // Update the current image data
+      _streamController.add(byteData);
     }
   }
 
-  void showError(String message) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Hata"),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text("Tamam"),
+  bool isValidImage(List<int> byteData) {
+    return byteData[0] == 0xFF && byteData[1] == 0xD8 && byteData[byteData.length - 2] == 0xFF && byteData[byteData.length - 1] == 0xD9;
+  }
+
+  void _captureScreenshot(List<int> imageData) {
+    if (imageData.isNotEmpty) {
+      setState(() {
+        capturedImages.add(Uint8List.fromList(imageData));
+      });
+    }
+  }
+
+  void _showFullScreenImage(Uint8List imageData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context), // Tap to close
+              child: Image.memory(imageData, fit: BoxFit.contain), // Show image centered
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ),
     );
+  }
+
+  void _showFullScreenLiveStream() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: currentImageData.isNotEmpty
+                ? Image.memory(Uint8List.fromList(currentImageData), fit: BoxFit.contain) // Centered
+                : Center(child: CircularProgressIndicator(color: Colors.red)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _channel.sink.close();
+    _webSocketSubscription.cancel();
+    _streamController.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("Güvenlik Sistemi"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.camera_alt),
-            onPressed: fetchImage, // Fotoğraf çekmek için buton
-          ),
-        ],
+        title: Text("Güvenlik Kamerası", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.red, // Tema rengini kırmızı yapıyoruz
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Kamera Görüntüsü",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      body: Column(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Center(
+              child: isLiveStreaming
+                  ? StreamBuilder<List<int>>(
+                stream: _streamController.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator(color: Colors.red);
+                  }
+                  if (snapshot.hasData && isValidImage(snapshot.data!)) {
+                    List<int> imageData = snapshot.data!;
+                    return Stack(
+                      children: [
+                        GestureDetector(
+                          onTap: () => _showFullScreenLiveStream(),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              Uint8List.fromList(imageData),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 20,
+                          right: 20,
+                          child: FloatingActionButton(
+                            backgroundColor: Colors.red,
+                            onPressed: () => _captureScreenshot(imageData),
+                            child: Icon(Icons.camera_alt, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Text("Yayın Başlatılıyor...", style: TextStyle(color: Colors.black54));
+                },
+              )
+                  : ElevatedButton(
+                onPressed: _connectToWebSocket,
+                child: Text("Canlı Yayını Başlat", style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red, // Buton rengini kırmızı yapıyoruz
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
             ),
-            SizedBox(height: 20),
-            imageUrl.isNotEmpty
-                ? Image.network(
-              imageUrl,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                        : null,
+          ),
+          Divider(color: Colors.grey),
+          Expanded(
+            flex: 1,
+            child: capturedImages.isNotEmpty
+                ? ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: capturedImages.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GestureDetector(
+                    onTap: () => _showFullScreenImage(capturedImages[index]),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.memory(
+                        capturedImages[index],
+                        fit: BoxFit.cover,
+                        width: 100,
+                        height: 100,
+                      ),
+                    ),
                   ),
                 );
               },
-              errorBuilder: (context, error, stackTrace) {
-                return Text("Görüntü yüklenemedi.");
-              },
             )
-                : Text("Görüntü henüz çekilmedi."),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: fetchImage, // Fotoğrafı yenilemek için buton
-        child: Icon(Icons.refresh),
+                : Center(
+              child: Text("Henüz görüntü alınmadı", style: TextStyle(color: Colors.black54)),
+            ),
+          ),
+        ],
       ),
     );
   }
