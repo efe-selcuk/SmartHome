@@ -11,6 +11,8 @@ import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/screens/security_screen.dart'; // Import the security screen
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -37,8 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // location paketi ile kullanıcı verilerini yükleme
   Future<void> loadUserData() async {
-    final FirebaseAuth _auth = FirebaseAuth.instance;
-    final currentUser = _auth.currentUser;
+    final FirebaseAuth auth = FirebaseAuth.instance;
+    final currentUser = auth.currentUser;
     if (currentUser != null) {
       setState(() {
         user = currentUser;
@@ -49,7 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchUserDetails(String userId) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(userId).get();
       if (doc.exists) {
         setState(() {
           firstName = doc['firstName'] ?? 'Ad Bulunamadı';
@@ -103,7 +106,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // Konum verisini al
     try {
       LocationData locationData = await location.getLocation();
-      print('Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
+      print(
+          'Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
       getWeatherData(locationData.latitude!, locationData.longitude!);
     } catch (e) {
       print('Konum alırken hata oluştu: $e');
@@ -111,7 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> getWeatherData(double latitude, double longitude) async {
-    final String url = "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=b265ec116d325a1b81af0bc0f5d3b50e&units=metric";
+    final String url =
+        "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=b265ec116d325a1b81af0bc0f5d3b50e&units=metric";
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
@@ -176,28 +181,383 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Chakrapp'),
-        actions: [
-          Builder(
-            builder: (context) {
-              return IconButton(
-                icon: Icon(Icons.menu),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 200.0,
+            floating: false,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: EdgeInsets.only(left: 16, bottom: 16),
+              title: Text(
+                'Chakra',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.8),
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 20),
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage: AssetImage('assets/images/profile_placeholder.png'),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Hoş geldin,',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$firstName $lastName',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.notifications_none),
                 onPressed: () {
-                  Scaffold.of(context).openEndDrawer();
+                  // Bildirimler için
                 },
-              );
-            },
+              ),
+              Builder(
+                builder: (context) {
+                  return IconButton(
+                    icon: Icon(Icons.menu),
+                    onPressed: () {
+                      Scaffold.of(context).openEndDrawer();
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hava Durumu Kartı
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.wb_sunny,
+                          size: 40,
+                          color: Colors.orange,
+                        ),
+                        SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$temperature°C',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              weatherDescription,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  
+                  // Odalar Başlığı ve Ekleme Butonu
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Odalar',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _showAddRoomDialog(),
+                        icon: Icon(Icons.add),
+                        label: Text('Oda Ekle'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  
+                  // Odalar Listesi
+                  rooms.isEmpty
+                      ? Center(
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.home_work_outlined,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Henüz oda eklenmemiş',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1.2,
+                          ),
+                          itemCount: rooms.length,
+                          itemBuilder: (context, index) {
+                            return _buildRoomCard(rooms[index]);
+                          },
+                        ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      endDrawer: Drawer(
+      endDrawer: _buildDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SecurityScreen()),
+          );
+        },
+        child: Icon(Icons.security),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
+    );
+  }
+
+  Widget _buildRoomCard(String roomName) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RoomDetailsScreen(roomName: roomName),
+          ),
+        );
+      },
+      onLongPress: () => _showDeleteConfirmation(roomName),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Arkaplan Dekorasyon
+              Positioned(
+                right: -20,
+                bottom: -20,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              // İçerik
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _getRoomIcon(roomName),
+                        size: 32,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      roomName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.devices,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          '4 Cihaz',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Hover Efekti için Overlay
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RoomDetailsScreen(roomName: roomName),
+                      ),
+                    );
+                  },
+                  onLongPress: () => _showDeleteConfirmation(roomName),
+                  splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  highlightColor: Theme.of(context).primaryColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getRoomIcon(String roomName) {
+    switch (roomName.toLowerCase()) {
+      case 'salon':
+        return Icons.living;
+      case 'yatak odası':
+        return Icons.bed;
+      case 'mutfak':
+        return Icons.kitchen;
+      case 'banyo':
+        return Icons.bathtub;
+      case 'çocuk odası':
+        return Icons.child_care;
+      default:
+        return Icons.room;
+    }
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).primaryColor,
+              Colors.white,
+            ],
+          ),
+        ),
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: Colors.red[900],
+                color: Colors.transparent,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,249 +585,193 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Profil'),
-              onTap: () => navigateTo('Profil'),
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Ayarlar'),
-              onTap: () => navigateTo('Ayarlar'),
-            ),
+            _buildDrawerItem(Icons.person, 'Profil', () => navigateTo('Profil')),
+            _buildDrawerItem(Icons.settings, 'Ayarlar', () => navigateTo('Ayarlar')),
             Divider(),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Çıkış Yap'),
-              onTap: logOut,
-            ),
+            _buildDrawerItem(Icons.logout, 'Çıkış Yap', logOut),
           ],
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Merhaba, $firstName',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Evinize hoş geldiniz',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Odalar',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Container(
-              padding: EdgeInsets.all(16.0),
-              margin: EdgeInsets.only(bottom: 20.0),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.5),
-                    spreadRadius: 5,
-                    blurRadius: 7,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Sıcaklık: $temperature°C',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Hava Durumu: $weatherDescription',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            // New Security Section
-            Container(
-              padding: EdgeInsets.all(16.0),
-              margin: EdgeInsets.only(bottom: 20.0),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.5),
-                    spreadRadius: 5,
-                    blurRadius: 7,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.security),
-                    title: Text(
-                      'Güvenlik Sistemi',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    onTap: () {
-                      // Navigate to the security screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SecurityScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: rooms.isEmpty
-                  ? Center(child: Text('Henüz oda eklenmemiş.'))
-                  : GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.2,
-                ),
-                itemCount: rooms.length,
-                itemBuilder: (context, index) {
-                  final room = rooms[index];
-                  return GestureDetector(
-                    onTap: () => navigateToRoomDetails(room),
-                    onLongPress: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text('Oda Sil'),
-                            content: Text('$room odasını silmek istiyor musunuz?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                                child: Text('İptal'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  deleteRoom(room);
-                                  Navigator.pop(context);
-                                },
-                                child: Text('Sil'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    child: Card(
-                      elevation: 5,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      color: Colors.red[50],
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            getRoomIcon(room),
-                            size: 60,
-                            color: Colors.red[900],
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            room,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red[900],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: Text('Oda Seç'),
-                content: Container(
-                  width: double.minPositive,
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: predefinedRooms.map((room) {
-                      return ListTile(
-                        title: Text(room),
-                        onTap: () {
-                          addRoom(room);
-                          int roomNumber = predefinedRooms.indexOf(room) + 1;
-                          SensorService.controlLight(roomNumber, true); // Işık açılıyor
-                          Navigator.pop(context);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: Text('Kapat'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-        child: Icon(Icons.add),
       ),
     );
   }
 
-  IconData getRoomIcon(String roomName) {
-    switch (roomName) {
-      case 'Salon':
-        return Icons.tv;
-      case 'Yatak Odası':
-        return Icons.bed;
-      case 'Mutfak':
-        return Icons.kitchen;
-      case 'Banyo':
-        return Icons.bathtub;
-      case 'Çocuk Odası':
-        return Icons.toys;
-      default:
-        return Icons.home;
-    }
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Theme.of(context).primaryColor),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+    );
   }
 
-  void navigateToRoomDetails(String roomName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RoomDetailsScreen(roomName: roomName),
+  void _showAddRoomDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Oda Ekle',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                SizedBox(height: 20),
+                ...predefinedRooms.map((room) => _buildRoomOption(room)).toList(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRoomOption(String roomName) {
+    return InkWell(
+      onTap: () {
+        addRoom(roomName);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        margin: EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _getRoomIcon(roomName),
+              size: 24,
+              color: Theme.of(context).primaryColor,
+            ),
+            SizedBox(width: 16),
+            Text(
+              roomName,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Spacer(),
+            Icon(
+              Icons.add_circle_outline,
+              color: Theme.of(context).primaryColor,
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  void _showDeleteConfirmation(String roomName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 32,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Odayı Sil',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '$roomName odasını silmek istediğinizden emin misiniz?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Vazgeç',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        deleteRoom(roomName);
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Sil',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

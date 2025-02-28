@@ -1,0 +1,2 @@
+C:/Users/HP/StudioProjects/SmartHome/android/app/.cxx/Debug/3m2v6i3q/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/HP/StudioProjects/SmartHome/android/app/.cxx/Debug/3m2v6i3q/armeabi-v7a/CMakeFiles/rebuild_cache.dir

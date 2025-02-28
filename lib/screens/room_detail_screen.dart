@@ -8,7 +8,7 @@ import 'dart:async';
 class RoomDetailsScreen extends StatefulWidget {
   final String roomName;
 
-  RoomDetailsScreen({required this.roomName});
+  const RoomDetailsScreen({super.key, required this.roomName});
 
   @override
   _RoomDetailsScreenState createState() => _RoomDetailsScreenState();
@@ -19,6 +19,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool isClimaOn = false;
   bool isLightOn = false; // Işık durumu sadece switch ile kontrol edilecek
   bool isTvOn = false;
+  bool _isDisposed = false;  // Eklenen değişken
   double? temperature;
   double? humidity;
   double lightIntensity = 50.0;
@@ -105,6 +106,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _isDisposed = false;  // initState'de false olarak ayarla
     _loadRoomData();
     // Periyodik veri güncellemeleri başlatılıyor
     _startPeriodicUpdates();
@@ -112,6 +114,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   @override
   void dispose() {
+    _isDisposed = true;  // dispose edildiğinde true yap
     // Periyodik güncellemeleri durduruyoruz
     _stopPeriodicUpdates();
     super.dispose();
@@ -167,178 +170,558 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.roomName} Detayları'),
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${widget.roomName} Odası',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            devices.isEmpty
-                ? Center(child: Text('Henüz cihaz eklenmemiş.'))
-                : Expanded(
-              child: ListView.builder(
-                itemCount: devices.length,
-                itemBuilder: (context, index) {
-                  if (devices[index] == 'Işık') {
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.lightbulb, color: lightColor),
-                        title: Text('Işık'),
-                        subtitle: Column(
-                          children: [
-                            // Işık rengini yuvarlak bir kutuda göstermek için
-                            Container(
-                              height: 40,
-                              width: 40,
-                              decoration: BoxDecoration(
-                                color: lightColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            Slider(
-                              value: lightIntensity,
-                              min: 0.0,
-                              max: 100.0,
-                              onChanged: (value) {
-                                setState(() {
-                                  lightIntensity = value;
-                                });
-                                _saveRoomData();
-                              },
-                            ),
-                            ElevatedButton(
-                              onPressed: _showColorPicker,
-                              child: Text("Rengi Seç"),
-                            ),
-                          ],
-                        ),
-                        trailing: Switch(
-                          value: isLightOn,
-                          onChanged: (value) {
-                            // Işığı açma veya kapama
-                            _controlLight(value);
-                          },
-                        ),
-                      ),
-                    );
-                  } else if (devices[index] == 'Klima') {
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.ac_unit, color: Colors.blue),
-                        title: Text('Klima'),
-                        subtitle: Column(
-                          children: [
-                            Text('Derece: ${climaTemperature.toStringAsFixed(1)}°C'),
-                            Slider(
-                              value: climaTemperature,
-                              min: 16.0,
-                              max: 30.0,
-                              onChanged: (value) {
-                                setState(() {
-                                  climaTemperature = value;
-                                });
-                                _saveRoomData();
-                              },
-                            ),
-                          ],
-                        ),
-                        trailing: Switch(
-                          value: isClimaOn,
-                          onChanged: (value) {
-                            setState(() {
-                              isClimaOn = value;
-                            });
-                            _saveRoomData();
-                          },
-                        ),
-                      ),
-                    );
-                  } else if (devices[index] == 'Akıllı TV') {
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.tv, color: Colors.black),
-                        title: Text('Akıllı TV'),
-                        trailing: Switch(
-                          value: isTvOn,
-                          onChanged: (value) {
-                            setState(() {
-                              isTvOn = value;
-                            });
-                            _saveRoomData();
-                          },
-                        ),
-                      ),
-                    );
-                  } else if (devices[index] == 'Sıcaklık & Nem') {
-                    return Card(
-                      child: ListTile(
-                        leading: Icon(Icons.thermostat, color: Colors.red),
-                        title: Text(
-                          'Sıcaklık: ${temperature?.toStringAsFixed(1)}°C, Nem: ${humidity?.toStringAsFixed(1)}%',
-                        ),
-                      ),
-                    );
-                  }
-                  return Container();
-                },
-              ),
-            ),
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).primaryColor.withOpacity(0.1),
+              Colors.white,
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: Text('Cihaz Seç'),
-                content: Container(
-                  width: double.minPositive,
-                  child: ListView(
-                    shrinkWrap: true,
+        child: SingleChildScrollView(
+          physics: BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Oda Başlığı ve Sensör Verileri
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
                     children: [
-                      ListTile(
-                        title: Text('Işık'),
-                        onTap: () {
-                          addDevice('Işık');
-                          Navigator.pop(context);
-                        },
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.roomName,
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Oda Durumu',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Icon(
+                            Icons.home,
+                            size: 40,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ],
                       ),
-                      ListTile(
-                        title: Text('Klima'),
-                        onTap: () {
-                          addDevice('Klima');
-                          Navigator.pop(context);
-                        },
-                      ),
-                      ListTile(
-                        title: Text('Akıllı TV'),
-                        onTap: () {
-                          addDevice('Akıllı TV');
-                          Navigator.pop(context);
-                        },
-                      ),
-                      ListTile(
-                        title: Text('Sıcaklık & Nem'),
-                        onTap: () {
-                          addDevice('Sıcaklık & Nem');
-                          Navigator.pop(context);
-                        },
+                      SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildSensorWidget(
+                            icon: Icons.thermostat,
+                            value: temperature?.toStringAsFixed(1) ?? '--',
+                            unit: '°C',
+                            label: 'Sıcaklık',
+                          ),
+                          Container(
+                            height: 50,
+                            width: 1,
+                            color: Colors.grey[300],
+                          ),
+                          _buildSensorWidget(
+                            icon: Icons.water_drop,
+                            value: humidity?.toStringAsFixed(1) ?? '--',
+                            unit: '%',
+                            label: 'Nem',
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              );
-            },
-          );
-        },
-        child: Icon(Icons.add),
+                SizedBox(height: 24),
+                
+                // Cihaz Listesi Başlığı ve Ekleme Butonu
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Cihazlar',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddDeviceDialog(),
+                      icon: Icon(Icons.add),
+                      label: Text('Cihaz Ekle'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                
+                // Cihaz Listesi
+                devices.isEmpty
+                    ? Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.devices_other,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Henüz cihaz eklenmemiş.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: devices.length,
+                        itemBuilder: (context, index) {
+                          if (devices[index] == 'Işık') {
+                            return _buildLightCard();
+                          } else if (devices[index] == 'Klima') {
+                            return _buildClimaCard();
+                          } else if (devices[index] == 'Akıllı TV') {
+                            return _buildDefaultDeviceCard(devices[index]);
+                          }
+                          return Container();
+                        },
+                      ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddDeviceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Cihaz Ekle',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                SizedBox(height: 20),
+                _buildDeviceOption(
+                  icon: Icons.lightbulb_outline,
+                  title: 'Işık',
+                  onTap: () {
+                    addDevice('Işık');
+                    Navigator.pop(context);
+                  },
+                ),
+                _buildDeviceOption(
+                  icon: Icons.ac_unit,
+                  title: 'Klima',
+                  onTap: () {
+                    addDevice('Klima');
+                    Navigator.pop(context);
+                  },
+                ),
+                _buildDeviceOption(
+                  icon: Icons.tv,
+                  title: 'Akıllı TV',
+                  onTap: () {
+                    addDevice('Akıllı TV');
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDeviceOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        margin: EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: Theme.of(context).primaryColor,
+            ),
+            SizedBox(width: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Spacer(),
+            Icon(
+              Icons.add_circle_outline,
+              color: Theme.of(context).primaryColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSensorWidget({
+    required IconData icon,
+    required String value,
+    required String unit,
+    required String label,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          size: 24,
+          color: Theme.of(context).primaryColor,
+        ),
+        SizedBox(height: 8),
+        RichText(
+          text: TextSpan(
+            style: DefaultTextStyle.of(context).style,
+            children: [
+              TextSpan(
+                text: value,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              TextSpan(
+                text: unit,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLightCard() {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          color: isLightOn ? Colors.yellow.withOpacity(0.1) : Colors.white,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.lightbulb,
+                      color: isLightOn ? lightColor : Colors.grey,
+                      size: 28,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Işık',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Switch(
+                  value: isLightOn,
+                  onChanged: _controlLight,
+                  activeColor: Theme.of(context).primaryColor,
+                ),
+              ],
+            ),
+            if (isLightOn) ...[
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Parlaklık',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: Theme.of(context).primaryColor,
+                            thumbColor: Theme.of(context).primaryColor,
+                            overlayColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                          ),
+                          child: Slider(
+                            value: lightIntensity,
+                            min: 0.0,
+                            max: 100.0,
+                            onChanged: (value) {
+                              setState(() {
+                                lightIntensity = value;
+                              });
+                              _saveRoomData();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  GestureDetector(
+                    onTap: _showColorPicker,
+                    child: Container(
+                      height: 40,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: lightColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.grey[300]!,
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: lightColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClimaCard() {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 300),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          color: isClimaOn ? Colors.blue.withOpacity(0.1) : Colors.white,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.ac_unit,
+                      color: isClimaOn ? Colors.blue : Colors.grey,
+                      size: 28,
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Klima',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Switch(
+                  value: isClimaOn,
+                  onChanged: (value) {
+                    setState(() {
+                      isClimaOn = value;
+                    });
+                    _saveRoomData();
+                  },
+                  activeColor: Colors.blue,
+                ),
+              ],
+            ),
+            if (isClimaOn) ...[
+              SizedBox(height: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sıcaklık Ayarı',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${climaTemperature.toStringAsFixed(1)}°C',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: Colors.blue,
+                            thumbColor: Colors.blue,
+                            overlayColor: Colors.blue.withOpacity(0.2),
+                          ),
+                          child: Slider(
+                            value: climaTemperature,
+                            min: 16.0,
+                            max: 30.0,
+                            onChanged: (value) {
+                              setState(() {
+                                climaTemperature = value;
+                              });
+                              _saveRoomData();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultDeviceCard(String deviceName) {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.all(16),
+        leading: Icon(
+          Icons.devices_other,
+          size: 28,
+          color: Theme.of(context).primaryColor,
+        ),
+        title: Text(
+          deviceName,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

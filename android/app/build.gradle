@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.smarthome"  // Uygulama ID'nizi buraya yazın
+        applicationId = "com.company.chakra"  // Uygulama ID'nizi buraya yazın
         minSdkVersion 23  // Firebase için minimum SDK 23 olmalı
         targetSdkVersion 34
         versionCode flutter.versionCode
