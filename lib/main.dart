@@ -15,6 +15,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -49,7 +51,7 @@ class MyApp extends StatelessWidget {
 class ErrorApp extends StatelessWidget {
   final String error;
 
-  ErrorApp({required this.error});
+  const ErrorApp({super.key, required this.error});
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +74,8 @@ class ErrorApp extends StatelessWidget {
 
 /// Kullanıcı oturum durumunu kontrol eder ve uygun ekranı gösterir.
 class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(

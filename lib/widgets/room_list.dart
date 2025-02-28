@@ -5,7 +5,7 @@ class RoomList extends StatelessWidget {
   final List<String> rooms;
   final Function(String) onRoomTap;
 
-  RoomList({required this.rooms, required this.onRoomTap});
+  const RoomList({super.key, required this.rooms, required this.onRoomTap});
 
   @override
   Widget build(BuildContext context) {

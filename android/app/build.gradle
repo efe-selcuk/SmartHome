@@ -40,12 +40,12 @@ android {
 }
 
 dependencies {
-    implementation platform('com.google.firebase:firebase-bom:31.0.0')  // Firebase BOM kullanarak sürüm uyumluluğunu yönetin
-    implementation 'com.google.firebase:firebase-analytics'  // Firebase Analytics (isteğe bağlı)
-    implementation 'com.google.firebase:firebase-auth'      // Firebase Authentication
-    implementation 'com.google.firebase:firebase-firestore'  // Firebase Firestore
-    implementation 'com.google.android.gms:play-services-location:18.0.0'  // Konum servisleri için bu kütüphane eklenmeli
-    implementation 'com.google.android.gms:play-services-maps:18.0.0'      // Harita ve konum bilgisi için (isteğe bağlı)
+    implementation platform('com.google.firebase:firebase-bom:32.7.2')  // Firebase BOM'u güncelle
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.android.gms:play-services-location:21.1.0'  // Konum servislerini güncelle
+    implementation 'com.google.android.gms:play-services-maps:18.2.0'      // Harita servislerini güncelle
 }
 
 apply plugin: 'com.google.gms.google-services'  // Firebase servislerinin çalışabilmesi için

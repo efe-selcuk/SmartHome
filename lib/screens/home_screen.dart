@@ -9,6 +9,13 @@ import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/screens/security_screen.dart'; // Import the security screen
+import 'package:smarthome/screens/control_panel_screen.dart';
+import 'package:smarthome/screens/profile_screen.dart';
+import 'package:smarthome/screens/notifications_screen.dart';
+import 'package:smarthome/screens/settings_screen.dart';
+import 'package:smarthome/screens/help_screen.dart';
+import 'package:app_settings/app_settings.dart';
+import 'package:smarthome/services/weather_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,6 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String temperature = '--';
   String weatherDescription = '--';
+  final WeatherService _weatherService = WeatherService();
+  String humidity = '--';
+  String windSpeed = '--';
+  String weatherIcon = '';
 
   // location paketi ile kullanıcı verilerini yükleme
   Future<void> loadUserData() async {
@@ -83,7 +94,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!serviceEnabled) {
       serviceEnabled = await location.requestService();
       if (!serviceEnabled) {
-        print("Konum servisi kapalı. Lütfen etkinleştirin.");
+        _showLocationDialog(
+          'Konum Servisi Kapalı',
+          'Hava durumu bilgilerini görebilmek için lütfen konum servisini etkinleştirin.',
+          'Ayarlara Git',
+          () async {
+            if (await location.requestService()) {
+              Navigator.pop(context);
+              getUserLocation();
+            }
+          },
+        );
         return;
       }
     }
@@ -93,40 +114,133 @@ class _HomeScreenState extends State<HomeScreen> {
     if (permission == PermissionStatus.denied) {
       permission = await location.requestPermission();
       if (permission == PermissionStatus.denied) {
-        print("Konum izni reddedildi. Lütfen izni verin.");
+        _showLocationDialog(
+          'Konum İzni Gerekli',
+          'Hava durumu bilgilerini görebilmek için konum iznine ihtiyacımız var.',
+          'İzin Ver',
+          () async {
+            Navigator.pop(context);
+            getUserLocation();
+          },
+        );
         return;
       }
     }
 
     if (permission == PermissionStatus.deniedForever) {
-      print("Konum izni kalıcı olarak reddedildi. Uygulama ayarlarına gidin.");
+      _showLocationDialog(
+        'Konum İzni Gerekli',
+        'Hava durumu bilgilerini görebilmek için uygulama ayarlarından konum iznini etkinleştirmeniz gerekiyor.',
+        'Ayarlara Git',
+        () async {
+          await AppSettings.openAppSettings();
+        },
+      );
       return;
     }
 
     // Konum verisini al
     try {
       LocationData locationData = await location.getLocation();
-      print(
-          'Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
+      print('Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
       getWeatherData(locationData.latitude!, locationData.longitude!);
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Konum alınamadı. Lütfen daha sonra tekrar deneyin.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
       print('Konum alırken hata oluştu: $e');
     }
   }
 
-  Future<void> getWeatherData(double latitude, double longitude) async {
-    final String url =
-        "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=b265ec116d325a1b81af0bc0f5d3b50e&units=metric";
-    final response = await http.get(Uri.parse(url));
+  // Konum izni dialog penceresi
+  void _showLocationDialog(String title, String message, String buttonText, VoidCallback onPressed) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              color: Colors.red[900],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.location_on,
+                size: 64,
+                color: Colors.red[900],
+              ),
+              SizedBox(height: 16),
+              Text(
+                message,
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Vazgeç',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[900],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(buttonText),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-    if (response.statusCode == 200) {
-      var data = json.decode(response.body);
+  Future<void> getWeatherData(double latitude, double longitude) async {
+    try {
+      final weatherData = await _weatherService.getWeather(latitude, longitude);
+      
       setState(() {
-        temperature = data['main']['temp'].toString();
-        weatherDescription = data['weather'][0]['description'];
+        temperature = weatherData['temperature'];
+        weatherDescription = weatherData['weatherDescription'];
+        humidity = weatherData['humidity'].toString();
+        windSpeed = weatherData['windSpeed'].toString();
+        weatherIcon = weatherData['icon'];
       });
-    } else {
-      throw Exception('Hava durumu verisi alınamadı');
+    } catch (e) {
+      print('Hava durumu verisi alınırken hata oluştu: $e');
+      setState(() {
+        temperature = '--';
+        weatherDescription = 'Hata oluştu';
+        humidity = '--';
+        windSpeed = '--';
+        weatherIcon = '';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hava durumu bilgisi alınamadı: ${e.toString()}'),
+          duration: Duration(seconds: 3),
+          backgroundColor: Colors.red[900],
+        ),
+      );
     }
   }
 
@@ -156,18 +270,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void navigateTo(String routeName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
+    Widget screen;
+    switch (routeName) {
+      case 'Kontrol Paneli':
+        screen = ControlPanelScreen();
+        break;
+      case 'Profil':
+        screen = ProfileScreen();
+        break;
+      case 'Bildirimler':
+        screen = NotificationsScreen();
+        break;
+      case 'Ayarlar':
+        screen = SettingsScreen();
+        break;
+      case 'Yardım':
+        screen = HelpScreen();
+        break;
+      default:
+        screen = Scaffold(
           appBar: AppBar(
             title: Text(routeName),
           ),
           body: Center(
             child: Text('$routeName ekranı'),
           ),
-        ),
-      ),
+        );
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => screen),
     );
   }
 
@@ -220,7 +353,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             CircleAvatar(
                               radius: 30,
-                              backgroundImage: AssetImage('assets/images/profile_placeholder.png'),
+                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                              child: Icon(
+                                Icons.person,
+                                size: 40,
+                                color: Theme.of(context).primaryColor,
+                              ),
                             ),
                             SizedBox(width: 16),
                             Expanded(
@@ -253,25 +391,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            actions: [
+        actions: [
               IconButton(
                 icon: Icon(Icons.notifications_none),
                 onPressed: () {
                   // Bildirimler için
                 },
               ),
-              Builder(
-                builder: (context) {
-                  return IconButton(
-                    icon: Icon(Icons.menu),
-                    onPressed: () {
-                      Scaffold.of(context).openEndDrawer();
-                    },
-                  );
+          Builder(
+            builder: (context) {
+              return IconButton(
+                icon: Icon(Icons.menu),
+                onPressed: () {
+                  Scaffold.of(context).openEndDrawer();
                 },
-              ),
-            ],
+              );
+            },
           ),
+        ],
+      ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -279,49 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Hava Durumu Kartı
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.wb_sunny,
-                          size: 40,
-                          color: Colors.orange,
-                        ),
-                        SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$temperature°C',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              weatherDescription,
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildWeatherCard(),
                   SizedBox(height: 24),
                   
                   // Odalar Başlığı ve Ekleme Butonu
@@ -550,6 +646,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Theme.of(context).primaryColor,
               Colors.white,
             ],
+            stops: [0.0, 0.3],
           ),
         ),
         child: ListView(
@@ -562,11 +659,32 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: AssetImage('assets/images/profile_placeholder.png'),
-                  ),
-                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                   Text(
                     '$firstName $lastName',
                     style: TextStyle(
@@ -575,68 +693,177 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                              SizedBox(height: 4),
                   Text(
-                    user != null ? user!.email ?? 'E-posta bulunamadı' : 'E-posta bulunamadı',
+                                user != null ? user!.email ?? 'E-posta bulunamadı' : 'E-posta bulunamadı',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.home_work,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          '${rooms.length} Oda',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            _buildDrawerItem(Icons.person, 'Profil', () => navigateTo('Profil')),
-            _buildDrawerItem(Icons.settings, 'Ayarlar', () => navigateTo('Ayarlar')),
-            Divider(),
-            _buildDrawerItem(Icons.logout, 'Çıkış Yap', logOut),
+            _buildDrawerSection(
+              'Ana Özellikler',
+              [
+                _buildDrawerItem(Icons.dashboard_rounded, 'Kontrol Paneli', () => navigateTo('Kontrol Paneli')),
+                _buildDrawerItem(Icons.security, 'Güvenlik', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SecurityScreen()),
+                  );
+                }),
+              ],
+            ),
+            Divider(height: 0),
+            _buildDrawerSection(
+              'Ayarlar',
+              [
+                _buildDrawerItem(Icons.person, 'Profil', () => navigateTo('Profil')),
+                _buildDrawerItem(Icons.notifications, 'Bildirimler', () => navigateTo('Bildirimler')),
+                _buildDrawerItem(Icons.settings, 'Ayarlar', () => navigateTo('Ayarlar')),
+                _buildDrawerItem(Icons.help_outline, 'Yardım', () => navigateTo('Yardım')),
+              ],
+            ),
+            Divider(height: 0),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                onPressed: logOut,
+                icon: Icon(Icons.logout),
+                label: Text('Çıkış Yap'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildDrawerSection(String title, List<Widget> items) {
+    return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            title,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        ...items,
+      ],
+    );
+  }
+
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Theme.of(context).primaryColor),
-      title: Text(
+      leading: Container(
+        padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: Theme.of(context).primaryColor,
+          size: 20,
+        ),
+      ),
+                    title: Text(
         title,
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
       ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Colors.grey[400],
+        size: 20,
+      ),
       onTap: onTap,
+      dense: true,
+      visualDensity: VisualDensity.compact,
     );
   }
 
   void _showAddRoomDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
+                            shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-          ),
+                            ),
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Column(
+                            child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
+                              children: [
+                                Text(
                   'Oda Ekle',
-                  style: TextStyle(
+                                  style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
                     color: Theme.of(context).primaryColor,
-                  ),
-                ),
+                                  ),
+                                ),
                 SizedBox(height: 20),
                 ...predefinedRooms.map((room) => _buildRoomOption(room)).toList(),
-              ],
-            ),
-          ),
-        );
-      },
+                              ],
+                            ),
+                          ),
+                        );
+                      },
     );
   }
 
@@ -684,9 +911,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showDeleteConfirmation(String roomName) {
-    showDialog(
-      context: context,
-      builder: (context) {
+          showDialog(
+            context: context,
+            builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -733,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    TextButton(
+                  TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Vazgeç',
@@ -745,10 +972,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () {
+                    onPressed: () {
                         deleteRoom(roomName);
-                        Navigator.pop(context);
-                      },
+                      Navigator.pop(context);
+                    },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
@@ -772,6 +999,121 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+    );
+  }
+
+  // Hava Durumu Widget'ı
+  Widget _buildWeatherCard() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              if (weatherIcon.isNotEmpty)
+                Image.network(
+                  'https://openweathermap.org/img/w/$weatherIcon.png',
+                  width: 50,
+                  height: 50,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      Icons.wb_sunny,
+                      size: 40,
+                      color: Colors.orange,
+                    );
+                  },
+                )
+              else
+                Icon(
+                  Icons.wb_sunny,
+                  size: 40,
+                  color: Colors.orange,
+                ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$temperature°C',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      weatherDescription,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Divider(),
+          SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildWeatherInfo(
+                Icons.water_drop,
+                'Nem',
+                '$humidity%',
+                Colors.blue,
+              ),
+              _buildWeatherInfo(
+                Icons.air,
+                'Rüzgar',
+                '$windSpeed m/s',
+                Colors.green,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeatherInfo(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ],
     );
   }
 }
