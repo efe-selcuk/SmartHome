@@ -148,6 +148,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Versiyon bilgisini göster
   void _showVersionInfo() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -159,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Container(
           padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? Color(0xFF2C2C2C) : Colors.white,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -170,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 70,
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -186,6 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
               SizedBox(height: 8),
@@ -193,13 +196,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: isDark ? Color(0xFF3A3A3A) : Colors.grey[100],
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   'Versiyon $appVersion',
                   style: TextStyle(
-                    color: Colors.grey[800],
+                    color: isDark ? Colors.white70 : Colors.grey[800],
                     fontSize: 14,
                   ),
                 ),
@@ -208,7 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 '© ${DateTime.now().year} Tüm hakları saklıdır',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: isDark ? Colors.white54 : Colors.grey[600],
                   fontSize: 12,
                 ),
               ),
@@ -239,6 +242,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   // Lisans bilgilerini göster
   void _showLicenses() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -250,7 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Container(
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? Color(0xFF2C2C2C) : Colors.white,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -263,26 +268,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.description_outlined, color: Theme.of(context).primaryColor),
+                      Icon(
+                        Icons.description_outlined, 
+                        color: Theme.of(context).primaryColor
+                      ),
                       SizedBox(width: 10),
                       Text(
                         'Lisanslar', 
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: Icon(Icons.close),
+                    icon: Icon(
+                      Icons.close,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
                     onPressed: () => Navigator.pop(context),
                     padding: EdgeInsets.zero,
                     constraints: BoxConstraints(),
                   ),
                 ],
               ),
-              Divider(),
+              Divider(color: isDark ? Colors.grey[800] : Colors.grey[300]),
               // İçerik
               Container(
                 constraints: BoxConstraints(
@@ -296,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: Colors.grey[800],
+                        color: isDark ? Colors.white : Colors.grey[800],
                       ),
                     ),
                     SizedBox(height: 12),
@@ -308,7 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
-              Divider(),
+              Divider(color: isDark ? Colors.grey[800] : Colors.grey[300]),
               // Alt Bilgi ve Butonlar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -317,12 +329,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     '© ${DateTime.now().year} Smart Home',
                     style: TextStyle(
                       fontSize: 11, 
-                      color: Colors.grey[600],
+                      color: isDark ? Colors.white54 : Colors.grey[600],
                     ),
                   ),
                   TextButton(
                     onPressed: () => _openFullLicenses(),
-                    child: Text('Tüm Lisanslar'),
+                    child: Text(
+                      'Tüm Lisanslar',
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                       minimumSize: Size(0, 0),
@@ -352,13 +369,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   // Lisans kartı widget'ı
   Widget _buildLicenseItem(String name, String licenseType, String url) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
       elevation: 0,
       margin: EdgeInsets.symmetric(vertical: 4),
-      color: Colors.grey[50],
+      color: isDark ? Color(0xFF383838) : Colors.grey[50],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey[200]!, width: 1),
+        side: BorderSide(
+          color: isDark ? Colors.grey[700]! : Colors.grey[200]!, 
+          width: 1
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -367,13 +389,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               name,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             ),
             SizedBox(height: 6),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -389,7 +414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               url,
               style: TextStyle(
-                color: Colors.blue[700],
+                color: isDark ? Colors.blue[300] : Colors.blue[700],
                 fontSize: 11,
                 decoration: TextDecoration.underline,
               ),
@@ -423,14 +448,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool value,
     Function(bool) onChanged,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).cardTheme.color : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark 
+              ? Colors.black.withOpacity(0.2) 
+              : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -440,7 +469,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -448,11 +477,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Theme.of(context).primaryColor,
           ),
         ),
-        title: Text(title),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Colors.grey[600],
+            color: isDark ? Colors.white70 : Colors.grey[600],
             fontSize: 12,
           ),
         ),
@@ -471,14 +505,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     IconData icon,
     VoidCallback onTap,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).cardTheme.color : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark 
+              ? Colors.black.withOpacity(0.2) 
+              : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -488,7 +526,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -496,17 +534,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Theme.of(context).primaryColor,
           ),
         ),
-        title: Text(title),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Colors.grey[600],
+            color: isDark ? Colors.white70 : Colors.grey[600],
             fontSize: 12,
           ),
         ),
         trailing: Icon(
           Icons.chevron_right,
-          color: Colors.grey[400],
+          color: isDark ? Colors.white54 : Colors.grey[400],
         ),
         onTap: onTap,
       ),
@@ -514,14 +557,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildLanguageSelector() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).cardTheme.color : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark 
+              ? Colors.black.withOpacity(0.2) 
+              : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -531,7 +578,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: Container(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -539,28 +586,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: Theme.of(context).primaryColor,
           ),
         ),
-        title: Text('Dil'),
+        title: Text(
+          'Dil',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
         subtitle: Text(
           'Uygulama dilini değiştir',
           style: TextStyle(
-            color: Colors.grey[600],
+            color: isDark ? Colors.white70 : Colors.grey[600],
             fontSize: 12,
           ),
         ),
-        trailing: DropdownButton<String>(
-          value: selectedLanguage,
-          underline: Container(),
-          items: [
-            DropdownMenuItem(
-              value: 'Türkçe',
-              child: Text('Türkçe'),
+        trailing: Theme(
+          data: Theme.of(context).copyWith(
+            canvasColor: isDark ? Color(0xFF383838) : Colors.white,
+          ),
+          child: DropdownButton<String>(
+            value: selectedLanguage,
+            underline: Container(),
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: isDark ? Colors.white70 : Colors.grey[700],
             ),
-            DropdownMenuItem(
-              value: 'English',
-              child: Text('English'),
-            ),
-          ],
-          onChanged: _onLanguageChanged,
+            items: [
+              DropdownMenuItem(
+                value: 'Türkçe',
+                child: Text(
+                  'Türkçe',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+              DropdownMenuItem(
+                value: 'English',
+                child: Text(
+                  'English',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: _onLanguageChanged,
+          ),
         ),
       ),
     );

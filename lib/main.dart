@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/transition_screen.dart';
 
 // En başta global bir değişken olarak API key tanımlayalım
 String weatherApiKey = '';
@@ -160,9 +161,18 @@ class _MyAppState extends State<MyApp> {
         title: 'Smart Home',
         themeMode: themeMode,
         theme: ThemeData(
+          useMaterial3: true,
           primaryColor: Colors.red[900],
           scaffoldBackgroundColor: Colors.white,
           fontFamily: 'Poppins',
+          colorScheme: ColorScheme.light(
+            primary: Colors.red[900]!,
+            secondary: Colors.red[700]!,
+            surface: Colors.white,
+            background: Colors.grey[50]!,
+            onBackground: Colors.black87,
+            onSurface: Colors.black,
+          ),
           appBarTheme: AppBarTheme(
             backgroundColor: Colors.red[900],
             titleTextStyle: TextStyle(
@@ -175,17 +185,64 @@ class _MyAppState extends State<MyApp> {
           floatingActionButtonTheme: FloatingActionButtonThemeData(
             backgroundColor: Colors.red[900],
             foregroundColor: Colors.white,
+          ),
+          cardTheme: CardTheme(
+            color: Colors.white,
+            shadowColor: Colors.black.withOpacity(0.1),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[900],
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          switchTheme: SwitchThemeData(
+            thumbColor: MaterialStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(MaterialState.selected)) {
+                return Colors.white;
+              }
+              return null;
+            }),
+            trackColor: MaterialStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(MaterialState.selected)) {
+                return Colors.red[900];
+              }
+              return null;
+            }),
           ),
           textTheme: TextTheme(
-            bodyMedium: TextStyle(color: Colors.black),
+            bodyMedium: TextStyle(color: Colors.black87),
             bodySmall: TextStyle(color: Colors.black54),
+            titleMedium: TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+          ),
+          dividerTheme: DividerThemeData(
+            color: Colors.grey[300],
+            thickness: 1,
           ),
         ),
-        darkTheme: ThemeData.dark().copyWith(
-          primaryColor: Colors.red[900],
-          scaffoldBackgroundColor: Colors.grey[900],
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          primaryColor: Colors.red[800],
+          scaffoldBackgroundColor: Color(0xFF121212),
+          fontFamily: 'Poppins',
+          colorScheme: ColorScheme.dark(
+            primary: Colors.red[800]!,
+            secondary: Colors.red[600]!,
+            surface: Color(0xFF1E1E1E),
+            background: Color(0xFF121212),
+            onBackground: Colors.white,
+            onSurface: Colors.white,
+          ),
           appBarTheme: AppBarTheme(
-            backgroundColor: Colors.red[900],
+            backgroundColor: Color(0xFF1E1E1E),
             titleTextStyle: TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -194,8 +251,49 @@ class _MyAppState extends State<MyApp> {
             iconTheme: IconThemeData(color: Colors.white),
           ),
           floatingActionButtonTheme: FloatingActionButtonThemeData(
-            backgroundColor: Colors.red[900],
+            backgroundColor: Colors.red[800],
             foregroundColor: Colors.white,
+          ),
+          cardTheme: CardTheme(
+            color: Color(0xFF2C2C2C),
+            shadowColor: Colors.black.withOpacity(0.3),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[800],
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          switchTheme: SwitchThemeData(
+            thumbColor: MaterialStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(MaterialState.selected)) {
+                return Colors.white;
+              }
+              return null;
+            }),
+            trackColor: MaterialStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(MaterialState.selected)) {
+                return Colors.red[800];
+              }
+              return null;
+            }),
+          ),
+          textTheme: TextTheme(
+            bodyMedium: TextStyle(color: Colors.white),
+            bodySmall: TextStyle(color: Colors.white70),
+            titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          ),
+          dividerTheme: DividerThemeData(
+            color: Colors.grey[800],
+            thickness: 1,
           ),
         ),
         home: AuthWrapper(),
@@ -247,8 +345,8 @@ class AuthWrapper extends StatelessWidget {
           );
         }
         if (snapshot.hasData) {
-          // Kullanıcı oturum açmışsa HomeScreen'e yönlendir
-          return HomeScreen();
+          // Kullanıcı oturum açmışsa TransitionScreen'e yönlendir
+          return TransitionScreen();
         }
         // Kullanıcı oturum açmamışsa LoginScreen'e yönlendir
         return LoginScreen();

@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:location/location.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:smarthome/screens/room_detail_screen.dart';
 import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
-import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/screens/security_screen.dart'; // Import the security screen
 import 'package:smarthome/screens/control_panel_screen.dart';
 import 'package:smarthome/screens/profile_screen.dart';
