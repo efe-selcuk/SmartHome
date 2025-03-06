@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -9,8 +10,33 @@ import 'screens/login_screen.dart';
 // En başta global bir değişken olarak API key tanımlayalım
 String weatherApiKey = '';
 
+// Tema ve Dil için global değişkenler
+bool isDarkMode = false;
+String appLanguage = 'Türkçe';
+
+// Ayarları kaydetmek için yardımcı fonksiyon
+Future<void> saveAppSettings() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('darkMode', isDarkMode);
+    await prefs.setString('language', appLanguage);
+  } catch (e) {
+    print("Ayarlar kaydedilemedi: $e");
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Ayarları yükle
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    isDarkMode = prefs.getBool('darkMode') ?? false;
+    appLanguage = prefs.getString('language') ?? 'Türkçe';
+    print("Ayarlar yüklendi: Karanlık mod: $isDarkMode, Dil: $appLanguage");
+  } catch (e) {
+    print("Ayarlar yüklenemedi: $e");
+  }
   
   try {
     // Önce kök dizindeki .env dosyasını yüklemeyi deneyelim
@@ -46,7 +72,7 @@ void main() async {
     }
     
     await Firebase.initializeApp();
-    runApp(MyApp());
+    runApp(const MyApp());
   } catch (e) {
     print("Hata: $e");
     
@@ -56,47 +82,129 @@ void main() async {
     
     try {
       await Firebase.initializeApp();
-      runApp(MyApp());
+      runApp(const MyApp());
     } catch (firebaseError) {
       runApp(ErrorApp(error: firebaseError.toString()));
     }
   }
 }
 
-class MyApp extends StatelessWidget {
+// Tema ve dil ayarları için InheritedWidget
+class AppSettings extends InheritedWidget {
+  final bool isDarkMode;
+  final String language;
+  final Function(bool) updateTheme;
+  final Function(String) updateLanguage;
+
+  const AppSettings({
+    super.key,
+    required this.isDarkMode,
+    required this.language,
+    required this.updateTheme,
+    required this.updateLanguage,
+    required super.child,
+  });
+
+  static AppSettings of(BuildContext context) {
+    final result = context.dependOnInheritedWidgetOfExactType<AppSettings>();
+    assert(result != null, 'No AppSettings found in context');
+    return result!;
+  }
+
+  @override
+  bool updateShouldNotify(AppSettings oldWidget) {
+    return isDarkMode != oldWidget.isDarkMode || 
+           language != oldWidget.language;
+  }
+}
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  // ThemeMode için getter
+  ThemeMode get themeMode => isDarkMode ? ThemeMode.dark : ThemeMode.light;
+  
+  // Tema değiştirme metodu
+  void updateTheme(bool darkMode) async {
+    if (isDarkMode != darkMode) {
+      setState(() {
+        isDarkMode = darkMode;
+      });
+      saveAppSettings();
+    }
+  }
+  
+  // Dil değiştirme metodu
+  void updateLanguage(String language) async {
+    if (appLanguage != language) {
+      setState(() {
+        appLanguage = language;
+      });
+      saveAppSettings();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Smart Home',
-      theme: ThemeData(
-        primaryColor: Colors.red[900],
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Poppins',
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.red[900],
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+    return AppSettings(
+      isDarkMode: isDarkMode,
+      language: appLanguage,
+      updateTheme: updateTheme,
+      updateLanguage: updateLanguage,
+      child: MaterialApp(
+        title: 'Smart Home',
+        themeMode: themeMode,
+        theme: ThemeData(
+          primaryColor: Colors.red[900],
+          scaffoldBackgroundColor: Colors.white,
+          fontFamily: 'Poppins',
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.red[900],
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            iconTheme: IconThemeData(color: Colors.white),
           ),
-          iconTheme: IconThemeData(color: Colors.white),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+            backgroundColor: Colors.red[900],
+            foregroundColor: Colors.white,
+          ),
+          textTheme: TextTheme(
+            bodyMedium: TextStyle(color: Colors.black),
+            bodySmall: TextStyle(color: Colors.black54),
+          ),
         ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: Colors.red[900],
-          foregroundColor: Colors.white,
+        darkTheme: ThemeData.dark().copyWith(
+          primaryColor: Colors.red[900],
+          scaffoldBackgroundColor: Colors.grey[900],
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.red[900],
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            iconTheme: IconThemeData(color: Colors.white),
+          ),
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+            backgroundColor: Colors.red[900],
+            foregroundColor: Colors.white,
+          ),
         ),
-        textTheme: TextTheme(
-          bodyMedium: TextStyle(color: Colors.black),
-          bodySmall: TextStyle(color: Colors.black54),
-        ),
+        home: AuthWrapper(),
       ),
-      home: AuthWrapper(),
     );
   }
 }
 
+// Yardımcı sınıflar
 class ErrorApp extends StatelessWidget {
   final String error;
 
