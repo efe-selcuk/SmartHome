@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Global API anahtarına erişim
+import '../main.dart' as main;
 
 class WeatherService {
-  final String apiKey = 'b265ec116d325a1b81af0bc0f5d3b50e';
   final String baseUrl = "https://api.openweathermap.org/data/2.5/weather";
 
   // Weather bilgisini almak için asenkron fonksiyon
@@ -27,6 +30,9 @@ class WeatherService {
 
   // API'den hava durumu verisini çekme
   Future<http.Response> _fetchWeatherData(double latitude, double longitude) async {
+    // Global değişkenden API anahtarını alıyoruz
+    final apiKey = main.weatherApiKey;
+    
     final String url = '$baseUrl?lat=$latitude&lon=$longitude&appid=$apiKey&units=metric&lang=tr';
     print('Hava durumu API çağrısı yapılıyor: $url');
     return await http.get(Uri.parse(url));

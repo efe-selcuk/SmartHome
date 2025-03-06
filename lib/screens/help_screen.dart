@@ -1,33 +1,35 @@
 import 'package:flutter/material.dart';
 
 class HelpScreen extends StatelessWidget {
-  final List<Map<String, String>> faqs = [
-    {
+  final List<Map<String, String>> faqs = const [
+    const {
       'question': 'Oda nasıl eklenir?',
       'answer':
           'Ana ekranda sağ üst köşedeki "+" butonuna tıklayarak yeni bir oda ekleyebilirsiniz. Açılan menüden oda tipini seçin ve odanızı oluşturun.',
     },
-    {
+    const {
       'question': 'Cihaz nasıl kontrol edilir?',
       'answer':
           'Oda detay ekranında bulunan cihazların yanındaki açma/kapama düğmelerini kullanarak cihazları kontrol edebilirsiniz.',
     },
-    {
+    const {
       'question': 'Güvenlik sistemi nasıl çalışır?',
       'answer':
           'Güvenlik ekranından alarm sistemini aktif edebilir, kamera görüntülerini izleyebilir ve hareket sensörlerini yönetebilirsiniz.',
     },
-    {
+    const {
       'question': 'Bildirimler nasıl özelleştirilir?',
       'answer':
           'Ayarlar > Bildirimler menüsünden hangi olaylar için bildirim almak istediğinizi seçebilirsiniz.',
     },
-    {
+    const {
       'question': 'Şifremi unuttum ne yapmalıyım?',
       'answer':
           'Giriş ekranındaki "Şifremi Unuttum" seçeneğini kullanarak e-posta adresinize sıfırlama bağlantısı gönderebilirsiniz.',
     },
   ];
+
+  const HelpScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

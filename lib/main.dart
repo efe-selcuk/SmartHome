@@ -1,16 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:io';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
+// En başta global bir değişken olarak API key tanımlayalım
+String weatherApiKey = '';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   try {
+    // Önce kök dizindeki .env dosyasını yüklemeyi deneyelim
+    bool dotenvLoaded = false;
+    
+    try {
+      await dotenv.load(fileName: ".env");
+      dotenvLoaded = true;
+      print(".env dosyası kök dizinden yüklendi");
+    } catch (e) {
+      print("Kök dizindeki .env dosyası yüklenemedi: $e");
+      
+      // Kök dizinde başarısız olursa, assets klasöründen deneyelim
+      try {
+        await dotenv.load(fileName: "assets/.env");
+        dotenvLoaded = true;
+        print(".env dosyası assets klasöründen yüklendi");
+      } catch (assetError) {
+        print("assets/.env dosyası da yüklenemedi: $assetError");
+      }
+    }
+    
+    // API anahtarını global değişkene atayalım
+    if (dotenvLoaded) {
+      weatherApiKey = dotenv.env['WEATHER_API_KEY'] ?? '';
+      print("API anahtarı yüklendi: ${weatherApiKey.isNotEmpty ? 'Başarılı' : 'Başarısız'}");
+    }
+    
+    if (weatherApiKey.isEmpty) {
+      // .env dosyasından yüklenemezse, hardcoded değeri kullan (geçici çözüm)
+      weatherApiKey = '0187db96d590aeb744a5c51c22726cde';
+      print("API anahtarı .env'den okunamadı, sabit değer kullanılıyor.");
+    }
+    
     await Firebase.initializeApp();
     runApp(MyApp());
   } catch (e) {
-    runApp(ErrorApp(error: e.toString()));
+    print("Hata: $e");
+    
+    // Hata durumunda da hardcoded API key kullan
+    weatherApiKey = '0187db96d590aeb744a5c51c22726cde';
+    print("Hata nedeniyle sabit API anahtarı kullanılıyor");
+    
+    try {
+      await Firebase.initializeApp();
+      runApp(MyApp());
+    } catch (firebaseError) {
+      runApp(ErrorApp(error: firebaseError.toString()));
+    }
   }
 }
 

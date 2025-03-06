@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:smarthome/services/device_service.dart';
 
 class ControlPanelScreen extends StatefulWidget {
+  const ControlPanelScreen({super.key});
+
   @override
   _ControlPanelScreenState createState() => _ControlPanelScreenState();
 }
@@ -162,7 +164,7 @@ class _ControlPanelScreenState extends State<ControlPanelScreen> {
                         ),
                         ...entry.value.map((device) => _buildDeviceCard(device)),
                       ],
-                    )).toList(),
+                    )),
                   ],
                 ),
               ),
@@ -172,8 +174,8 @@ class _ControlPanelScreenState extends State<ControlPanelScreen> {
           // Yeni cihaz ekleme dialogu
           _showAddDeviceDialog();
         },
-        child: Icon(Icons.add),
         backgroundColor: Theme.of(context).primaryColor,
+        child: Icon(Icons.add),
       ),
     );
   }

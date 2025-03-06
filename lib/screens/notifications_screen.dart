@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
   @override
   _NotificationsScreenState createState() => _NotificationsScreenState();
 }
@@ -41,9 +43,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             icon: Icon(Icons.done_all),
             onPressed: () {
               setState(() {
-                notifications.forEach((notification) {
+                for (var notification in notifications) {
                   notification['isRead'] = true;
-                });
+                }
               });
             },
           ),

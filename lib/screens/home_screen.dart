@@ -499,8 +499,8 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (context) => SecurityScreen()),
           );
         },
-        child: Icon(Icons.security),
         backgroundColor: Theme.of(context).primaryColor,
+        child: Icon(Icons.security),
       ),
     );
   }
@@ -858,7 +858,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                 SizedBox(height: 20),
-                ...predefinedRooms.map((room) => _buildRoomOption(room)).toList(),
+                ...predefinedRooms.map((room) => _buildRoomOption(room)),
                               ],
                             ),
                           ),

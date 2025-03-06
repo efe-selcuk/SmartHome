@@ -195,7 +195,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
             child: Center(
               child: Hero(
                 tag: 'image_${imageData.hashCode}',
-                child: Image.memory(imageData, fit: BoxFit.contain),
+              child: Image.memory(imageData, fit: BoxFit.contain),
               ),
             ),
           ),
@@ -302,8 +302,8 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
         ),
         child: SafeArea(
           child: Column(
-            children: [
-              Expanded(
+        children: [
+          Expanded(
                 flex: 2,
                 child: Container(
                   margin: EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -376,10 +376,10 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                             fit: StackFit.expand,
                             children: [
                               StreamBuilder<Uint8List>(
-                                stream: _streamController?.stream,
-                                builder: (context, snapshot) {
-                                  if (snapshot.hasError) {
-                                    return Center(
+                      stream: _streamController?.stream,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -413,12 +413,12 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    );
-                                  }
+                            ),
+                          );
+                        }
 
-                                  if (!snapshot.hasData) {
-                                    return Center(
+                        if (!snapshot.hasData) {
+                          return Center(
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -627,7 +627,7 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                       ],
                     ),
                     SizedBox(height: 20),
-                    Container(
+                    SizedBox(
                       height: 120,
                       child: capturedImages.isEmpty
                           ? Center(
@@ -652,13 +652,13 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                               ),
                             )
                           : ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: capturedImages.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: capturedImages.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
                                   padding: EdgeInsets.only(right: 16),
-                                  child: GestureDetector(
-                                    onTap: () => _showFullScreenImage(capturedImages[index]),
+                        child: GestureDetector(
+                          onTap: () => _showFullScreenImage(capturedImages[index]),
                                     child: Container(
                                       width: 120,
                                       decoration: BoxDecoration(
@@ -671,16 +671,16 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                                           ),
                                         ],
                                       ),
-                                      child: ClipRRect(
+                          child: ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
                                         child: Stack(
                                           fit: StackFit.expand,
                                           children: [
                                             Hero(
                                               tag: 'image_${capturedImages[index].hashCode}',
-                                              child: Image.memory(
-                                                capturedImages[index],
-                                                fit: BoxFit.cover,
+                            child: Image.memory(
+                              capturedImages[index],
+                              fit: BoxFit.cover,
                                               ),
                                             ),
                                             Container(
@@ -732,17 +732,17 @@ class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProvid
                                             ),
                                           ],
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                             ),
                     ),
                   ],
-                ),
-              ),
-            ],
+                  ),
+          ),
+        ],
           ),
         ),
       ),

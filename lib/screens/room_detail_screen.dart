@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/services/database_service.dart';
@@ -160,8 +159,47 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     setState(() {
       isLightOn = isOn;
     });
-    int room = 1;  // Odanın numarasını burada belirtin, örneğin 1. oda
-    await SensorService.controlLight(room, isOn);  // ESP32'ye ışığı açma/kapama komutu gönder
+    
+    // Odanın adına göre oda numarasını belirle
+    int roomNumber;
+    
+    switch (widget.roomName.toLowerCase()) {
+      case 'salon':
+        roomNumber = 1;
+        break;
+      case 'yatak odası':
+        roomNumber = 2;
+        break;
+      case 'mutfak':
+        roomNumber = 3;
+        break;
+      case 'banyo':
+        roomNumber = 4;
+        break;
+      case 'çocuk odası':
+        roomNumber = 5;
+        break;
+      default:
+        // Eğer özel bir oda ismi var ise, son kelimesindeki sayıyı almaya çalış
+        // Örnek: "Oda 3" için 3 numaralı odayı kullan
+        final RegExp regExp = RegExp(r'(\d+)');
+        final match = regExp.firstMatch(widget.roomName);
+        if (match != null) {
+          roomNumber = int.parse(match.group(1)!);
+          // Eğer oda numarası 5'ten büyükse, 1-5 arasında bir değere map yap
+          if (roomNumber > 5) {
+            roomNumber = ((roomNumber - 1) % 5) + 1;
+          }
+        } else {
+          // Eşleşme yoksa varsayılan olarak 1. odayı kullan
+          roomNumber = 1;
+        }
+        break;
+    }
+    
+    print('Oda: ${widget.roomName}, Oda Numarası: $roomNumber olarak belirlendi');
+    
+    await SensorService.controlLight(roomNumber, isOn);  // Belirlenen oda numarasına göre ESP32'ye komut gönder
     _saveRoomData();  // Veriyi kaydet
   }
 
