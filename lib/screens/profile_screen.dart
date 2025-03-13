@@ -627,11 +627,11 @@ class ChangePasswordDialog extends StatefulWidget {
   final VoidCallback onForgotPassword;
 
   const ChangePasswordDialog({
-    Key? key,
+    super.key,
     required this.email,
     required this.onSuccess,
     required this.onForgotPassword,
-  }) : super(key: key);
+  });
 
   @override
   _ChangePasswordDialogState createState() => _ChangePasswordDialogState();

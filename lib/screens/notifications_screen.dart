@@ -16,7 +16,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   
   // Bildirim tercihleri
   bool _allNotificationsEnabled = true;
-  Map<String, bool> _notificationPreferences = {
+  final Map<String, bool> _notificationPreferences = {
     'security': true,
     'device': true,
     'system': true,

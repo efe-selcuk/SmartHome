@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:flutter/foundation.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -221,7 +220,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Tamam'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
@@ -231,6 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     padding: EdgeInsets.symmetric(vertical: 12),
                   ),
+                  child: Text('Tamam'),
                 ),
               ),
             ],
@@ -334,16 +333,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   TextButton(
                     onPressed: () => _openFullLicenses(),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      minimumSize: Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     child: Text(
                       'Tüm Lisanslar',
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                       ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      minimumSize: Size(0, 0),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],

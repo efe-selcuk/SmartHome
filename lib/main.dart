@@ -3,8 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
-import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/transition_screen.dart';
 
@@ -169,8 +167,6 @@ class _MyAppState extends State<MyApp> {
             primary: Colors.red[900]!,
             secondary: Colors.red[700]!,
             surface: Colors.white,
-            background: Colors.grey[50]!,
-            onBackground: Colors.black87,
             onSurface: Colors.black,
           ),
           appBarTheme: AppBarTheme(
@@ -205,14 +201,14 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
           switchTheme: SwitchThemeData(
-            thumbColor: MaterialStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(MaterialState.selected)) {
+            thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.selected)) {
                 return Colors.white;
               }
               return null;
             }),
-            trackColor: MaterialStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(MaterialState.selected)) {
+            trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.selected)) {
                 return Colors.red[900];
               }
               return null;
@@ -237,8 +233,6 @@ class _MyAppState extends State<MyApp> {
             primary: Colors.red[800]!,
             secondary: Colors.red[600]!,
             surface: Color(0xFF1E1E1E),
-            background: Color(0xFF121212),
-            onBackground: Colors.white,
             onSurface: Colors.white,
           ),
           appBarTheme: AppBarTheme(
@@ -273,14 +267,14 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
           switchTheme: SwitchThemeData(
-            thumbColor: MaterialStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(MaterialState.selected)) {
+            thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.selected)) {
                 return Colors.white;
               }
               return null;
             }),
-            trackColor: MaterialStateProperty.resolveWith<Color?>((states) {
-              if (states.contains(MaterialState.selected)) {
+            trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+              if (states.contains(WidgetState.selected)) {
                 return Colors.red[800];
               }
               return null;

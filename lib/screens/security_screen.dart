@@ -11,7 +11,7 @@ class SecurityScreen extends StatefulWidget {
 }
 
 class _SecurityScreenState extends State<SecurityScreen> with SingleTickerProviderStateMixin {
-  final String socketUrl = 'ws://192.168.1.6:81';
+  final String socketUrl = 'ws://192.168.1.9:81';
   WebSocketChannel? _channel;
   StreamController<Uint8List>? _streamController;
   bool isLiveStreaming = false;

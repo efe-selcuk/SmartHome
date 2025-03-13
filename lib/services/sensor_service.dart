@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:async';
 
 class SensorService {
-  static const String apiUrl = 'http://192.168.1.8'; // ESP32'nin IP adresi
+  static const String apiUrl = 'http://192.168.1.2'; // ESP32'nin IP adresi
 
   // Her odanın GPIO pinini belirleyelim
   static const Map<int, String> roomEndpoints = {
@@ -69,6 +69,64 @@ class SensorService {
       print('Oda $room kliması ${temperature.toStringAsFixed(1)}°C\'ye ayarlandı');
     } else {
       print('Klima kontrol edilemedi');
+    }
+  }
+
+  // Yeni AC kontrol metotları
+  
+  // AC durumunu al
+  static Future<Map<String, dynamic>> getACStatus() async {
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/status'));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data;
+      } else {
+        throw Exception('AC durumu alınamadı');
+      }
+    } catch (e) {
+      print('AC durumu alınırken hata: $e');
+      return {'status': 'unknown', 'temperature': 22};
+    }
+  }
+  
+  // AC'yi aç/kapa
+  static Future<bool> setACStatus(bool isOn) async {
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/ac?status=${isOn ? "on" : "off"}'));
+      
+      if (response.statusCode == 200) {
+        print('AC ${isOn ? "açıldı" : "kapandı"}');
+        return true;
+      } else {
+        print('AC kontrol edilemedi');
+        return false;
+      }
+    } catch (e) {
+      print('AC kontrol edilirken hata: $e');
+      return false;
+    }
+  }
+  
+  // AC sıcaklığını ayarla (17-30 arasında)
+  static Future<bool> setACTemperature(int temperature) async {
+    // Sıcaklık değerini 17-30 arasında sınırla
+    temperature = temperature.clamp(17, 30);
+    
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/ac?temp=$temperature'));
+      
+      if (response.statusCode == 200) {
+        print('AC sıcaklığı $temperature°C\'ye ayarlandı');
+        return true;
+      } else {
+        print('AC sıcaklığı ayarlanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('AC sıcaklığı ayarlanırken hata: $e');
+      return false;
     }
   }
 

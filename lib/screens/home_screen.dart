@@ -13,6 +13,7 @@ import 'package:smarthome/screens/settings_screen.dart';
 import 'package:smarthome/screens/help_screen.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:smarthome/services/weather_service.dart';
+import 'package:smarthome/services/sensor_service.dart'; // Add this import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -548,17 +549,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _getRoomIcon(roomName),
-                        size: 32,
-                        color: Theme.of(context).primaryColor,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getRoomIcon(roomName),
+                            size: 32,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        // AC Hızlı Kontrol Butonu
+                        _buildACQuickControl(roomName),
+                      ],
                     ),
                     SizedBox(height: 12),
                     Text(
@@ -612,6 +620,57 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // Klima hızlı kontrol butonu
+  Widget _buildACQuickControl(String roomName) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: () async {
+            // Klima durum değişikliği için 
+            Map<String, dynamic>? roomData = await _databaseService.loadRoomData(roomName);
+            if (roomData != null) {
+              bool isClimaOn = roomData['isClimaOn'] ?? false;
+              
+              // API ile klimayı aç/kapa
+              bool success = await SensorService.setACStatus(!isClimaOn);
+              
+              if (success) {
+                // Firestore'da durumu güncelle
+                roomData['isClimaOn'] = !isClimaOn;
+                await _databaseService.saveRoomData(roomName, roomData);
+                setState(() {});  // StatefulBuilder'daki state'i güncelle
+              }
+            }
+          },
+          child: FutureBuilder<Map<String, dynamic>?>(
+            future: _databaseService.loadRoomData(roomName),
+            builder: (context, snapshot) {
+              bool isClimaOn = false;
+              
+              if (snapshot.hasData && snapshot.data != null) {
+                isClimaOn = snapshot.data!['isClimaOn'] ?? false;
+              }
+              
+              return Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isClimaOn ? Colors.blue.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.ac_unit,
+                  color: isClimaOn ? Colors.blue : Colors.grey,
+                  size: 24,
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/services/database_service.dart';
+import 'package:smarthome/screens/ac_detail_screen.dart';
 import 'dart:async';
 
 class RoomDetailsScreen extends StatefulWidget {
@@ -109,6 +110,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     _loadRoomData();
     // Periyodik veri güncellemeleri başlatılıyor
     _startPeriodicUpdates();
+    _startACStatusUpdates(); // AC durumunu güncelleme
   }
 
   @override
@@ -201,6 +203,81 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     
     await SensorService.controlLight(roomNumber, isOn);  // Belirlenen oda numarasına göre ESP32'ye komut gönder
     _saveRoomData();  // Veriyi kaydet
+  }
+
+  // Klima açma/kapatma
+  Future<void> _controlAC(bool isOn) async {
+    try {
+      bool success = await SensorService.setACStatus(isOn);
+      if (success) {
+        setState(() {
+          isClimaOn = isOn;
+        });
+        _saveRoomData();
+      }
+    } catch (e) {
+      print('Klima kontrol edilirken hata: $e');
+      // Hata durumunda kullanıcıya bilgi ver
+      if (!_isDisposed && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Klima kontrol edilemedi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Klima sıcaklığını ayarlama
+  Future<void> _setACTemperature(int temperature) async {
+    try {
+      bool success = await SensorService.setACTemperature(temperature);
+      if (success) {
+        setState(() {
+          climaTemperature = temperature.toDouble();
+        });
+        _saveRoomData();
+      }
+    } catch (e) {
+      print('Klima sıcaklığı ayarlanırken hata: $e');
+      // Hata durumunda kullanıcıya bilgi ver
+      if (!_isDisposed && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Klima sıcaklığı ayarlanamadı: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // AC durumunu periyodik olarak güncelleme
+  void _startACStatusUpdates() {
+    Timer.periodic(Duration(seconds: 10), (timer) async {
+      if (_isDisposed) {
+        timer.cancel();
+        return;
+      }
+      try {
+        final acStatus = await SensorService.getACStatus();
+        if (!_isDisposed && mounted) {
+          setState(() {
+            if (acStatus['status'] == 'on') {
+              isClimaOn = true;
+            } else if (acStatus['status'] == 'off') {
+              isClimaOn = false;
+            }
+            if (acStatus['temperature'] != null) {
+              climaTemperature = acStatus['temperature'].toDouble();
+            }
+          });
+        }
+      } catch (e) {
+        print('AC durumu güncellenirken hata: $e');
+      }
+    });
   }
 
   @override
@@ -637,103 +714,129 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   }
 
   Widget _buildClimaCard() {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          color: isClimaOn ? Colors.blue.withOpacity(0.1) : Colors.white,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.ac_unit,
-                      color: isClimaOn ? Colors.blue : Colors.grey,
-                      size: 28,
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Klima',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                Switch(
-                  value: isClimaOn,
-                  onChanged: (value) {
-                    setState(() {
-                      isClimaOn = value;
-                    });
-                    _saveRoomData();
-                  },
-                  activeColor: Colors.blue,
-                ),
-              ],
+    return GestureDetector(
+      onTap: () {
+        // Klima detay ekranına git
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ACDetailScreen(
+              roomName: widget.roomName,
+              initialIsOn: isClimaOn,
+              initialTemperature: climaTemperature,
             ),
-            if (isClimaOn) ...[
-              SizedBox(height: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+        );
+      },
+      child: Card(
+        margin: EdgeInsets.symmetric(vertical: 8),
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 300),
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: isClimaOn ? Colors.blue.withOpacity(0.1) : Colors.white,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Sıcaklık Ayarı',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(
-                        '${climaTemperature.toStringAsFixed(1)}°C',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
+                      Icon(
+                        Icons.ac_unit,
+                        color: isClimaOn ? Colors.blue : Colors.grey,
+                        size: 28,
                       ),
-                      Expanded(
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            activeTrackColor: Colors.blue,
-                            thumbColor: Colors.blue,
-                            overlayColor: Colors.blue.withOpacity(0.2),
-                          ),
-                          child: Slider(
-                            value: climaTemperature,
-                            min: 16.0,
-                            max: 30.0,
-                            onChanged: (value) {
-                              setState(() {
-                                climaTemperature = value;
-                              });
-                              _saveRoomData();
-                            },
-                          ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Klima',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
+                  Switch(
+                    value: isClimaOn,
+                    onChanged: (value) {
+                      _controlAC(value); // Yeni API ile kontrolü çağır
+                    },
+                    activeColor: Colors.blue,
+                  ),
                 ],
               ),
+              if (isClimaOn) ...[
+                SizedBox(height: 16),
+                // Sıcaklık bilgisi görüntüle, değiştirme seçeneği detay sayfasında
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sıcaklık',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        Text(
+                          '${climaTemperature.round()}°C',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.grey,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemperatureButton(int temp) {
+    bool isSelected = climaTemperature.round() == temp;
+    
+    return GestureDetector(
+      onTap: () {
+        _setACTemperature(temp);
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Colors.blue.shade300 : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          '$temp°C',
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
