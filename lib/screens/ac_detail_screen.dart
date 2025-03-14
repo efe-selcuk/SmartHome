@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smarthome/services/sensor_service.dart';
+import 'package:smarthome/services/database_service.dart';
 import 'dart:async';
 
 class ACDetailScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _ACDetailScreenState extends State<ACDetailScreen> {
   double temperature = 24.0;
   bool _isDisposed = false;
   Timer? _statusUpdateTimer;
+  final DatabaseService _databaseService = DatabaseService();
   
   // Fan hızı ve mod ayarları (UI demo amaçlı)
   String fanSpeed = 'Otomatik';
@@ -35,8 +37,13 @@ class _ACDetailScreenState extends State<ACDetailScreen> {
   void initState() {
     super.initState();
     _isDisposed = false;
+    
+    // İlk başta widget'tan gelen değerleri ata
     isACOn = widget.initialIsOn;
     temperature = widget.initialTemperature;
+    
+    // Firestore'dan en güncel değerleri al
+    _loadACStatusFromFirestore();
     
     // API'den periyodik güncellemeler al
     _startStatusUpdates();
@@ -59,14 +66,28 @@ class _ACDetailScreenState extends State<ACDetailScreen> {
       }
       
       try {
-        final acStatus = await SensorService.getACStatus();
-        if (!_isDisposed && mounted) {
-          setState(() {
-            isACOn = acStatus['status'] == 'on';
-            if (acStatus['temperature'] != null) {
-              temperature = acStatus['temperature'].toDouble();
-            }
-          });
+        // Firestore'dan son durumu al
+        final acData = await _databaseService.loadRoomData(widget.roomName);
+        if (acData != null && acData.containsKey('isClimaOn')) {
+          if (!_isDisposed && mounted) {
+            setState(() {
+              isACOn = acData['isClimaOn'];
+              if (acData['climaTemp'] != null) {
+                temperature = acData['climaTemp'];
+              }
+            });
+          }
+        } else {
+          // Eğer Firestore'da veri yoksa, sensörden al
+          final acStatus = await SensorService.getACStatus();
+          if (!_isDisposed && mounted) {
+            setState(() {
+              isACOn = acStatus['status'] == 'on';
+              if (acStatus['temperature'] != null) {
+                temperature = acStatus['temperature'].toDouble();
+              }
+            });
+          }
         }
       } catch (e) {
         print('AC durumu güncellenirken hata: $e');
@@ -80,6 +101,13 @@ class _ACDetailScreenState extends State<ACDetailScreen> {
       if (success && mounted) {
         setState(() {
           isACOn = value;
+        });
+        
+        // Firestore'a AC durumunu kaydet
+        await _databaseService.saveRoomData(widget.roomName, {
+          'isClimaOn': value,
+          'climaTemp': temperature,
+          'lastUpdated': DateTime.now().millisecondsSinceEpoch,
         });
       }
     } catch (e) {
@@ -102,6 +130,13 @@ class _ACDetailScreenState extends State<ACDetailScreen> {
         setState(() {
           temperature = value.toDouble();
         });
+        
+        // Firestore'a sıcaklık ayarını kaydet
+        await _databaseService.saveRoomData(widget.roomName, {
+          'isClimaOn': isACOn,
+          'climaTemp': value.toDouble(),
+          'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+        });
       }
     } catch (e) {
       print('Sıcaklık ayarlanırken hata: $e');
@@ -113,6 +148,22 @@ class _ACDetailScreenState extends State<ACDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _loadACStatusFromFirestore() async {
+    try {
+      final acData = await _databaseService.loadRoomData(widget.roomName);
+      if (acData != null && acData.containsKey('isClimaOn') && mounted) {
+        setState(() {
+          isACOn = acData['isClimaOn'];
+          if (acData['climaTemp'] != null) {
+            temperature = acData['climaTemp'];
+          }
+        });
+      }
+    } catch (e) {
+      print('Firestore\'dan AC durumu yüklenirken hata: $e');
     }
   }
 

@@ -641,6 +641,15 @@ class _HomeScreenState extends State<HomeScreen> {
               if (success) {
                 // Firestore'da durumu güncelle
                 roomData['isClimaOn'] = !isClimaOn;
+                
+                // Klima sıcaklığı yoksa varsayılan değer ayarla
+                if (!roomData.containsKey('climaTemp')) {
+                  roomData['climaTemp'] = 22.0;
+                }
+                
+                // Değişiklik zaman damgası ekle
+                roomData['lastUpdated'] = DateTime.now().millisecondsSinceEpoch;
+                
                 await _databaseService.saveRoomData(roomName, roomData);
                 setState(() {});  // StatefulBuilder'daki state'i güncelle
               }

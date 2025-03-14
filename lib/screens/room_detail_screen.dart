@@ -128,10 +128,42 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     });
   }
 
+  // AC durumunu periyodik olarak güncelle
+  Timer? _acStatusTimer;
+  void _startACStatusUpdates() {
+    _acStatusTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
+      if (_isDisposed) {
+        timer.cancel();
+        return;
+      }
+      
+      try {
+        Map<String, dynamic>? roomData = await _databaseService.loadRoomData(widget.roomName);
+        if (roomData != null && mounted) {
+          bool newIsClimaOn = roomData['isClimaOn'] ?? false;
+          double newClimaTemp = roomData['climaTemp'] ?? 22.0;
+          
+          // Sadece değişiklik varsa state'i güncelle
+          if (newIsClimaOn != isClimaOn || newClimaTemp != climaTemperature) {
+            setState(() {
+              isClimaOn = newIsClimaOn;
+              climaTemperature = newClimaTemp;
+            });
+          }
+        }
+      } catch (e) {
+        print('AC durumu güncellenirken hata: $e');
+      }
+    });
+  }
+
   // Periyodik veri güncellemelerini durdur
   void _stopPeriodicUpdates() {
     if (_timer != null) {
       _timer!.cancel();
+    }
+    if (_acStatusTimer != null) {
+      _acStatusTimer!.cancel();
     }
   }
 
@@ -251,33 +283,6 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         );
       }
     }
-  }
-
-  // AC durumunu periyodik olarak güncelleme
-  void _startACStatusUpdates() {
-    Timer.periodic(Duration(seconds: 10), (timer) async {
-      if (_isDisposed) {
-        timer.cancel();
-        return;
-      }
-      try {
-        final acStatus = await SensorService.getACStatus();
-        if (!_isDisposed && mounted) {
-          setState(() {
-            if (acStatus['status'] == 'on') {
-              isClimaOn = true;
-            } else if (acStatus['status'] == 'off') {
-              isClimaOn = false;
-            }
-            if (acStatus['temperature'] != null) {
-              climaTemperature = acStatus['temperature'].toDouble();
-            }
-          });
-        }
-      } catch (e) {
-        print('AC durumu güncellenirken hata: $e');
-      }
-    });
   }
 
   @override
