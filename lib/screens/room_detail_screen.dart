@@ -20,10 +20,13 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool isLightOn = false; // Işık durumu sadece switch ile kontrol edilecek
   bool isTvOn = false;
   bool _isDisposed = false;  // Eklenen değişken
+  bool isIRLedOn = false;    // IR LED durumu
   double? temperature;
   double? humidity;
   double lightIntensity = 50.0;
   double climaTemperature = 22.0;
+  String irLedColor = 'white'; // IR LED rengi (white, red, green, blue)
+  String irLedEffect = 'normal'; // IR LED efekti - başlangıçta kart kapalı
   Color lightColor = Colors.white;
 
   final DatabaseService _databaseService = DatabaseService();
@@ -52,6 +55,9 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       'isTvOn': isTvOn,
       'temperature': temperature,
       'humidity': humidity,
+      'isIRLedOn': isIRLedOn,  // IR LED durumu eklendi
+      'irLedColor': irLedColor, // IR LED rengi eklendi
+      'irLedEffect': irLedEffect, // IR LED efekti eklendi
     };
     await _databaseService.saveRoomData(widget.roomName, data);
   }
@@ -111,6 +117,19 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     // Periyodik veri güncellemeleri başlatılıyor
     _startPeriodicUpdates();
     _startACStatusUpdates(); // AC durumunu güncelleme
+    _checkIRLedStatus(); // IR LED durumunu kontrol et
+  }
+
+  // IR LED durumunu kontrol et
+  Future<void> _checkIRLedStatus() async {
+    try {
+      Map<String, dynamic> status = await SensorService.getIRLedStatus();
+      setState(() {
+        isIRLedOn = status['isOn'];
+      });
+    } catch (e) {
+      print('IR LED durumu kontrol edilirken hata: $e');
+    }
   }
 
   @override
@@ -182,6 +201,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         isTvOn = roomData['isTvOn'];
         temperature = roomData['temperature'];
         humidity = roomData['humidity'];
+        
+        // IR LED verileri
+        isIRLedOn = roomData['isIRLedOn'] ?? false;
+        irLedColor = roomData['irLedColor'] ?? 'white';
+        irLedEffect = roomData['irLedEffect'] ?? 'normal';
       });
     } else {
       print("Oda verisi bulunamadı.");
@@ -235,6 +259,69 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     
     await SensorService.controlLight(roomNumber, isOn);  // Belirlenen oda numarasına göre ESP32'ye komut gönder
     _saveRoomData();  // Veriyi kaydet
+  }
+
+  // IR LED açma/kapatma
+  Future<void> _controlIRLed(bool isOn) async {
+    try {
+      bool success = await SensorService.controlIRLed(isOn);
+      if (success) {
+        setState(() {
+          isIRLedOn = isOn;
+        });
+        _saveRoomData();
+      }
+    } catch (e) {
+      print('IR LED kontrol edilirken hata: $e');
+    }
+  }
+
+  // IR LED rengini değiştir
+  Future<void> _setIRLedColor(String color) async {
+    try {
+      bool success = await SensorService.setIRLedColor(color);
+      if (success) {
+        setState(() {
+          irLedColor = color;
+        });
+        _saveRoomData();
+      }
+    } catch (e) {
+      print('IR LED rengi ayarlanırken hata: $e');
+    }
+  }
+
+  // IR LED efektini değiştir
+  Future<void> _setIRLedEffect(String effect) async {
+    try {
+      bool success = await SensorService.setIRLedEffect(effect);
+      if (success) {
+        setState(() {
+          irLedEffect = effect;
+        });
+        _saveRoomData();
+      }
+    } catch (e) {
+      print('IR LED efekti ayarlanırken hata: $e');
+    }
+  }
+
+  // IR LED parlaklığını artır
+  Future<void> _increaseIRLedBrightness() async {
+    try {
+      await SensorService.increaseIRLedBrightness();
+    } catch (e) {
+      print('IR LED parlaklığı artırılırken hata: $e');
+    }
+  }
+
+  // IR LED parlaklığını azalt
+  Future<void> _decreaseIRLedBrightness() async {
+    try {
+      await SensorService.decreaseIRLedBrightness();
+    } catch (e) {
+      print('IR LED parlaklığı azaltılırken hata: $e');
+    }
   }
 
   // Klima açma/kapatma
@@ -398,7 +485,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () => _showAddDeviceDialog(),
+                      onPressed: _showAddDeviceDialog,
                       icon: Icon(Icons.add),
                       label: Text('Cihaz Ekle'),
                       style: ElevatedButton.styleFrom(
@@ -447,10 +534,13 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                             return _buildClimaCard();
                           } else if (devices[index] == 'Akıllı TV') {
                             return _buildDefaultDeviceCard(devices[index]);
+                          } else if (devices[index] == 'Akıllı LED Işık') {
+                            return _buildIRLedCard();
                           }
                           return Container();
                         },
                       ),
+                SizedBox(height: 16),
               ],
             ),
           ),
@@ -463,51 +553,53 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+        return AlertDialog(
+          title: Text("Cihaz Ekle"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDeviceOption(
+                icon: Icons.lightbulb,
+                title: "Işık",
+                onTap: () {
+                  addDevice("Işık");
+                  Navigator.pop(context);
+                },
+              ),
+              _buildDeviceOption(
+                icon: Icons.ac_unit,
+                title: "Klima",
+                onTap: () {
+                  addDevice("Klima");
+                  Navigator.pop(context);
+                },
+              ),
+              _buildDeviceOption(
+                icon: Icons.tv,
+                title: "Akıllı TV",
+                onTap: () {
+                  addDevice("Akıllı TV");
+                  Navigator.pop(context);
+                },
+              ),
+              _buildDeviceOption(
+                icon: Icons.wb_incandescent,
+                title: "Akıllı LED Işık",
+                onTap: () {
+                  addDevice("Akıllı LED Işık");
+                  Navigator.pop(context);
+                },
+              ),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Cihaz Ekle',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                SizedBox(height: 20),
-                _buildDeviceOption(
-                  icon: Icons.lightbulb_outline,
-                  title: 'Işık',
-                  onTap: () {
-                    addDevice('Işık');
-                    Navigator.pop(context);
-                  },
-                ),
-                _buildDeviceOption(
-                  icon: Icons.ac_unit,
-                  title: 'Klima',
-                  onTap: () {
-                    addDevice('Klima');
-                    Navigator.pop(context);
-                  },
-                ),
-                _buildDeviceOption(
-                  icon: Icons.tv,
-                  title: 'Akıllı TV',
-                  onTap: () {
-                    addDevice('Akıllı TV');
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text("İptal"),
             ),
-          ),
+          ],
         );
       },
     );
@@ -870,5 +962,255 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         ),
       ),
     );
+  }
+
+  // IR LED kontrol kartı
+  Widget _buildIRLedCard() {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          gradient: isIRLedOn 
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: _getGradientColors(),
+              ) 
+            : null,
+          color: isIRLedOn ? null : Colors.white,
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            dividerColor: Colors.transparent,
+            unselectedWidgetColor: isIRLedOn ? Colors.white : Colors.grey,
+            colorScheme: ColorScheme.fromSwatch().copyWith(
+              secondary: isIRLedOn ? Colors.white : Theme.of(context).primaryColor,
+            ),
+          ),
+          child: ExpansionTile(
+            title: Row(
+              children: [
+                Icon(
+                  Icons.wb_incandescent,
+                  color: isIRLedOn ? _getIconColor() : Colors.grey,
+                  size: 28,
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'Akıllı LED Işık',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isIRLedOn ? Colors.white : Colors.black,
+                  ),
+                ),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Switch(
+                  value: isIRLedOn,
+                  onChanged: _controlIRLed,
+                  activeColor: Colors.white,
+                ),
+                Icon(
+                  Icons.expand_more,
+                  color: isIRLedOn ? Colors.white : Colors.grey,
+                ),
+              ],
+            ),
+            tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            childrenPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
+            children: isIRLedOn 
+              ? [
+                  Divider(color: Colors.white30),
+                  SizedBox(height: 12),
+                  Text(
+                    'Renk',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  // Renk seçim butonları
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildColorButton('red', 'Kırmızı', Colors.red),
+                      _buildColorButton('green', 'Yeşil', Colors.green),
+                      _buildColorButton('blue', 'Mavi', Colors.blue),
+                      _buildColorButton('white', 'Beyaz', Colors.white),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'Efektler',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  // Efekt seçim butonları
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildEffectButton('flash', 'Flash'),
+                        SizedBox(width: 10),
+                        _buildEffectButton('strobe', 'Strobe'),
+                        SizedBox(width: 10),
+                        _buildEffectButton('fade', 'Fade'),
+                        SizedBox(width: 10),
+                        _buildEffectButton('smooth', 'Smooth'),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'Parlaklık',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  // Parlaklık kontrol butonları
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _decreaseIRLedBrightness,
+                        child: Icon(Icons.remove, color: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                          shape: CircleBorder(),
+                          padding: EdgeInsets.all(12),
+                          backgroundColor: Colors.black38,
+                        ),
+                      ),
+                      SizedBox(width: 30),
+                      ElevatedButton(
+                        onPressed: _increaseIRLedBrightness,
+                        child: Icon(Icons.add, color: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                          shape: CircleBorder(),
+                          padding: EdgeInsets.all(12),
+                          backgroundColor: Colors.black38,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                ]
+              : [],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // IR LED renk seçim butonu
+  Widget _buildColorButton(String colorName, String label, Color buttonColor) {
+    bool isSelected = irLedColor == colorName;
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _setIRLedColor(colorName),
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            height: 45,
+            width: 45,
+            decoration: BoxDecoration(
+              color: buttonColor,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? Colors.white : Colors.transparent,
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: buttonColor.withOpacity(0.6),
+                  blurRadius: isSelected ? 12 : 5,
+                  spreadRadius: isSelected ? 4 : 0,
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // IR LED efekt seçim butonu
+  Widget _buildEffectButton(String effectName, String label) {
+    bool isSelected = irLedEffect == effectName;
+    return GestureDetector(
+      onTap: () => _setIRLedEffect(effectName),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white24 : Colors.black26,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // IR LED arka plan renklerini seçme
+  List<Color> _getGradientColors() {
+    switch (irLedColor) {
+      case 'red':
+        return [Colors.red.shade700, Colors.red.shade900];
+      case 'green':
+        return [Colors.green.shade600, Colors.green.shade900];
+      case 'blue':
+        return [Colors.blue.shade600, Colors.blue.shade900];
+      case 'white':
+      default:
+        return [Color(0xFF6A11CB), Color(0xFF2575FC)]; // Mor-mavi gradyan
+    }
+  }
+
+  // IR LED ikon rengini seçme
+  Color _getIconColor() {
+    switch (irLedColor) {
+      case 'red':
+        return Colors.white;
+      case 'green':
+        return Colors.white;
+      case 'blue':
+        return Colors.white;
+      case 'white':
+      default:
+        return Colors.white;
+    }
   }
 }
