@@ -14,6 +14,7 @@ import 'package:smarthome/screens/help_screen.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:smarthome/services/weather_service.dart';
 import 'package:smarthome/services/sensor_service.dart'; // Add this import
+import 'dart:math' as math;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -315,158 +316,334 @@ class _HomeScreenState extends State<HomeScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 200.0,
+            expandedHeight: 150.0,
             floating: false,
             pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: EdgeInsets.only(left: 16, bottom: 16),
-              title: Text(
-                'Chakra',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 20),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                              child: Icon(
-                                Icons.person,
-                                size: 40,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Hoş geldin,',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    '$firstName $lastName',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+            stretch: true,
+            backgroundColor: Theme.of(context).primaryColor,
+            elevation: 4,
+            flexibleSpace: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                // Calculate the app bar's current height to adjust content
+                final expandRatio = (constraints.maxHeight - kToolbarHeight) / (150.0 - kToolbarHeight);
+                final isCollapsed = expandRatio < 0.3;
+                
+                return FlexibleSpaceBar(
+                  titlePadding: EdgeInsets.only(left: 20, bottom: 16),
+                  centerTitle: false,
+                  title: AnimatedOpacity(
+                    duration: Duration(milliseconds: 200),
+                    opacity: isCollapsed ? 1.0 : 1.0,
+                    child: Text(
+                      'Chakra',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 10.0,
+                            color: Colors.black.withOpacity(0.3),
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                  collapseMode: CollapseMode.pin,
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Gradient background with artistic design
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Theme.of(context).primaryColor,
+                              Theme.of(context).primaryColor.withOpacity(0.7),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Artistic overlay pattern
+                      CustomPaint(
+                        painter: ArtisticPatternPainter(),
+                        child: Container(),
+                      ),
+                      // Content - Moved user profile to the top with higher padding
+                      SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
+                          child: Opacity(
+                            opacity: expandRatio.clamp(0.0, 1.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Colors.white.withOpacity(0.2),
+                                        child: Icon(
+                                          Icons.person,
+                                          size: 24,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Hoş geldin 👋',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.9),
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          Text(
+                                            '$firstName $lastName',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 5,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-        actions: [
+            actions: [
               IconButton(
-                icon: Icon(Icons.notifications_none),
+                icon: Icon(
+                  Icons.notifications_none_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 onPressed: () {
                   // Bildirimler için
                 },
               ),
-          Builder(
-            builder: (context) {
-              return IconButton(
-                icon: Icon(Icons.menu),
-                onPressed: () {
-                  Scaffold.of(context).openEndDrawer();
+              Builder(
+                builder: (context) {
+                  return IconButton(
+                    icon: Icon(
+                      Icons.menu_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      Scaffold.of(context).openEndDrawer();
+                    },
+                  );
                 },
-              );
-            },
+              ),
+            ],
           ),
-        ],
-      ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Ana Göstergeler - Daha dolu bir görünüm için yeni bir widget ekliyoruz
+                  _buildMainStats(),
+                  SizedBox(height: 16),
+                  
                   // Hava Durumu Kartı
                   _buildWeatherCard(),
-                  SizedBox(height: 24),
+                  SizedBox(height: 16),
                   
                   // Odalar Başlığı ve Ekleme Butonu
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Odalar',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Theme.of(context).primaryColor,
+                                  Theme.of(context).primaryColor.withOpacity(0.8),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.home_work_rounded,
+                              size: 24,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Odalar',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
-                      ElevatedButton.icon(
+                      ElevatedButton(
                         onPressed: () => _showAddRoomDialog(),
-                        icon: Icon(Icons.add),
-                        label: Text('Oda Ekle'),
                         style: ElevatedButton.styleFrom(
+                          elevation: 4,
+                          shadowColor: Theme.of(context).primaryColor.withOpacity(0.4),
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
                           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Oda Ekle',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 16),
+                  SizedBox(height: 12),
                   
                   // Odalar Listesi
                   rooms.isEmpty
                       ? Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.home_work_outlined,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'Henüz oda eklenmemiş',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
+                          child: Container(
+                            padding: EdgeInsets.all(30),
+                            margin: EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 20,
+                                  offset: Offset(0, 10),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.home_work_outlined,
+                                    size: 60,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                                SizedBox(height: 24),
+                                Text(
+                                  'Henüz oda eklenmemiş',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'İlk odanızı eklemek için "Oda Ekle" butonuna tıklayın',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.grey[600],
+                                    height: 1.5,
+                                  ),
+                                ),
+                                SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () => _showAddRoomDialog(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Oda Ekle',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         )
                       : GridView.builder(
@@ -476,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
-                            childAspectRatio: 1.2,
+                            childAspectRatio: 1.0,
                           ),
                           itemCount: rooms.length,
                           itemBuilder: (context, index) {
@@ -490,15 +667,51 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       endDrawer: _buildDrawer(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => SecurityScreen()),
-          );
-        },
-        backgroundColor: Theme.of(context).primaryColor,
-        child: Icon(Icons.security),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).primaryColor.withOpacity(0.3),
+              blurRadius: 15,
+              offset: Offset(0, 6),
+              spreadRadius: 0,
+            ),
+          ],
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SecurityScreen()),
+            );
+          },
+          backgroundColor: Theme.of(context).primaryColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Color.fromARGB(255, 180, 0, 0),
+                ],
+              ),
+            ),
+            child: Icon(
+              Icons.security_rounded,
+              size: 28,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -517,33 +730,46 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: Offset(0, 4),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+              spreadRadius: 0,
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           child: Stack(
             children: [
-              // Arkaplan Dekorasyon
+              // Background decoration
               Positioned(
-                right: -20,
-                bottom: -20,
+                right: -40,
+                bottom: -40,
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  width: 130,
+                  height: 130,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).primaryColor.withOpacity(0.08),
                     shape: BoxShape.circle,
                   ),
                 ),
               ),
-              // İçerik
+              Positioned(
+                left: -20,
+                top: -20,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.05),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              // Content
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -553,14 +779,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: EdgeInsets.all(8),
+                          padding: EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
                             _getRoomIcon(roomName),
-                            size: 32,
+                            size: 24,
                             color: Theme.of(context).primaryColor,
                           ),
                         ),
@@ -582,23 +808,37 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Icon(
                           Icons.devices,
-                          size: 16,
+                          size: 14,
                           color: Colors.grey[600],
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          '4 Cihaz',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                        SizedBox(width: 6),
+                        FutureBuilder<Map<String, dynamic>?>(
+                          future: _databaseService.loadRoomData(roomName),
+                          builder: (context, snapshot) {
+                            int deviceCount = 0;
+                            
+                            if (snapshot.hasData && snapshot.data != null) {
+                              // Cihaz sayısını belirleme
+                              final devices = snapshot.data!['devices'] as List<dynamic>?;
+                              deviceCount = devices?.length ?? 0;
+                            }
+                            
+                            return Text(
+                              '$deviceCount Cihaz',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              // Hover Efekti için Overlay
+              // Hover effect overlay
               Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -613,7 +853,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onLongPress: () => _showDeleteConfirmation(roomName),
                   splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
                   highlightColor: Theme.of(context).primaryColor.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
             ],
@@ -664,15 +904,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 isClimaOn = snapshot.data!['isClimaOn'] ?? false;
               }
               
-              return Container(
-                padding: EdgeInsets.all(8),
+              return AnimatedContainer(
+                duration: Duration(milliseconds: 300),
+                padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isClimaOn ? Colors.blue.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                  color: isClimaOn 
+                      ? Colors.blue.withOpacity(0.15) 
+                      : Colors.grey.withOpacity(0.1),
                   shape: BoxShape.circle,
+                  boxShadow: isClimaOn
+                      ? [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.2),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          )
+                        ]
+                      : [],
+                  border: Border.all(
+                    color: isClimaOn 
+                        ? Colors.blue.withOpacity(0.5) 
+                        : Colors.transparent,
+                    width: 2,
+                  ),
                 ),
                 child: Icon(
-                  Icons.ac_unit,
-                  color: isClimaOn ? Colors.blue : Colors.grey,
+                  Icons.ac_unit_rounded,
+                  color: isClimaOn ? Colors.blue : Colors.grey[400],
                   size: 24,
                 ),
               );
@@ -902,74 +1160,177 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAddRoomDialog() {
-                            showDialog(
-                              context: context,
-                              builder: (context) {
+    showDialog(
+      context: context,
+      builder: (context) {
         return Dialog(
-                            shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-                            ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-                            child: Column(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 10,
+          backgroundColor: Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white,
+                  Colors.grey[50]!,
+                ],
+              ),
+            ),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                  'Oda Ekle',
-                                  style: TextStyle(
-                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: Offset(0, 5),
+                          )
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.add_home,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Oda Ekle',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 30),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.grey[50],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      ...predefinedRooms.map((room) => _buildRoomOption(room)),
+                    ],
+                  ),
+                ),
                 SizedBox(height: 20),
-                ...predefinedRooms.map((room) => _buildRoomOption(room)),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Vazgeç',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildRoomOption(String roomName) {
-    return InkWell(
-      onTap: () {
-        addRoom(roomName);
-        Navigator.pop(context);
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        margin: EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              _getRoomIcon(roomName),
-              size: 24,
-              color: Theme.of(context).primaryColor,
-            ),
-            SizedBox(width: 16),
-            Text(
-              roomName,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          addRoom(roomName);
+          Navigator.pop(context);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getRoomIcon(roomName),
+                  size: 28,
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
-            ),
-            Spacer(),
-            Icon(
-              Icons.add_circle_outline,
-              color: Theme.of(context).primaryColor,
-            ),
-          ],
+              SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  roomName,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.add,
+                  color: Theme.of(context).primaryColor,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1069,83 +1430,200 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Hava Durumu Widget'ı
   Widget _buildWeatherCard() {
+    // Hava durumuna göre renkler ve ikonlar
+    final Map<String, List<Color>> weatherGradients = {
+      'Clear': [Color(0xFF3399fe), Color(0xFF66c6ff)], // Açık - Mavi tonları
+      'Clouds': [Color(0xFF6c7689), Color(0xFF8c96a8)], // Bulutlu - Gri tonları
+      'Rain': [Color(0xFF4B6CB7), Color(0xFF182848)], // Yağmurlu - Koyu mavi
+      'Thunderstorm': [Color(0xFF283E51), Color(0xFF4B79A1)], // Fırtınalı - Koyu lacivert
+      'Snow': [Color(0xFF8e9eab), Color(0xFFeef2f3)], // Karlı - Gri-beyaz
+      'Mist': [Color(0xFF757F9A), Color(0xFFD7DDE8)], // Sisli - Gri-bej
+      'default': [Color(0xFF3399fe), Color(0xFF66c6ff)], // Varsayılan
+    };
+    
+    // Hava durumuna göre gradient seçimi
+    List<Color> gradientColors = weatherGradients['default']!;
+    
+    // Mevcut hava durumuna göre gradient belirle
+    if (weatherDescription.isNotEmpty) {
+      for (String condition in weatherGradients.keys) {
+        if (weatherDescription.toLowerCase().contains(condition.toLowerCase())) {
+          gradientColors = weatherGradients[condition]!;
+          break;
+        }
+      }
+    }
+    
+    // Hava durumuna göre arka plan ikonları
+    IconData weatherBgIcon = Icons.wb_sunny;
+    if (weatherDescription.toLowerCase().contains('cloud')) {
+      weatherBgIcon = Icons.cloud;
+    } else if (weatherDescription.toLowerCase().contains('rain')) {
+      weatherBgIcon = Icons.grain;
+    } else if (weatherDescription.toLowerCase().contains('thunder')) {
+      weatherBgIcon = Icons.flash_on;
+    } else if (weatherDescription.toLowerCase().contains('snow')) {
+      weatherBgIcon = Icons.ac_unit;
+    } else if (weatherDescription.toLowerCase().contains('mist') || 
+               weatherDescription.toLowerCase().contains('fog')) {
+      weatherBgIcon = Icons.water;
+    }
+    
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: gradientColors[0].withOpacity(0.3),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
+      child: Stack(
         children: [
-          Row(
-            children: [
-              if (weatherIcon.isNotEmpty)
-                Image.network(
-                  'https://openweathermap.org/img/w/$weatherIcon.png',
-                  width: 50,
-                  height: 50,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      Icons.wb_sunny,
-                      size: 40,
-                      color: Colors.orange,
-                    );
-                  },
-                )
-              else
-                Icon(
-                  Icons.wb_sunny,
-                  size: 40,
-                  color: Colors.orange,
-                ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$temperature°C',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      weatherDescription,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Arka plan dekoratif ikonları
+          Positioned(
+            right: -15,
+            top: -20,
+            child: Icon(
+              weatherBgIcon,
+              size: 80,
+              color: Colors.white.withOpacity(0.1),
+            ),
           ),
-          SizedBox(height: 12),
-          Divider(),
-          SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          // Ana içerik
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildWeatherInfo(
-                Icons.water_drop,
-                'Nem',
-                '$humidity%',
-                Colors.blue,
+              // Konum bilgisi
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    color: Colors.white.withOpacity(0.8),
+                    size: 14,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Bulunduğunuz Konum',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-              _buildWeatherInfo(
-                Icons.air,
-                'Rüzgar',
-                '$windSpeed m/s',
-                Colors.green,
+              SizedBox(height: 8),
+              // Hava durumu ana bilgileri
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Hava durumu ikonu
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: weatherIcon.isNotEmpty
+                      ? Image.network(
+                          'https://openweathermap.org/img/w/$weatherIcon.png',
+                          width: 35,
+                          height: 35,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            weatherBgIcon,
+                            size: 26,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          weatherBgIcon,
+                          size: 26,
+                          color: Colors.white,
+                        ),
+                  ),
+                  SizedBox(width: 12),
+                  // Sıcaklık ve açıklama
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$temperature',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              '°C',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white.withOpacity(0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          weatherDescription,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Nem ve rüzgar bilgisi
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.water_drop, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            '$humidity%',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.air, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            '$windSpeed m/s',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -1154,31 +1632,149 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWeatherInfo(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
+  // Ana istatistikler widget'ı
+  Widget _buildMainStats() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: Offset(0, 5),
+          )
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(Icons.thermostat, 'Sıcaklık', '24°C', Colors.orange),
+          _buildVerticalDivider(),
+          _buildStatItem(Icons.water_drop, 'Nem', '${humidity != '--' ? humidity : 45}%', Colors.blue),
+          _buildVerticalDivider(),
+          _buildStatItem(Icons.shield, 'Güvenlik', 'Aktif', Colors.green),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      height: 40,
+      width: 1,
+      color: Colors.grey.withOpacity(0.2),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
-        Icon(icon, color: color, size: 24),
-        SizedBox(height: 4),
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        SizedBox(height: 8),
         Text(
           label,
           style: TextStyle(
-            color: Colors.grey[600],
             fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
           ),
         ),
+        SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
-            fontWeight: FontWeight.bold,
             fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
       ],
     );
+  }
+}
+
+// Artistic Pattern Painter for background design
+class ArtisticPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    
+    // Desenler için rastgele değerler
+    final random = math.Random(42); // Sabit seed ile rastgele değerler
+    
+    // Desenli arka plan
+    for (int i = 0; i < 8; i++) {
+      // Yatay çizgiler
+      double y = size.height * (0.2 + 0.1 * i);
+      double amplitude = 15 + random.nextDouble() * 10;
+      double frequency = 0.02 + random.nextDouble() * 0.04;
+      
+      Path wavePath = Path();
+      wavePath.moveTo(0, y);
+      
+      for (double x = 0; x <= size.width; x += 5) {
+        double dy = math.sin(x * frequency) * amplitude;
+        wavePath.lineTo(x, y + dy);
+      }
+      
+      canvas.drawPath(wavePath, paint);
+    }
+    
+    // Dikey çizgiler
+    for (int i = 0; i < 6; i++) {
+      double x = size.width * (0.1 + 0.2 * i);
+      
+      Path path = Path();
+      path.moveTo(x, 0);
+      path.lineTo(x, size.height * 0.5);
+      
+      canvas.drawPath(path, paint);
+    }
+    
+    // Daireler
+    for (int i = 0; i < 8; i++) {
+      double x = random.nextDouble() * size.width;
+      double y = random.nextDouble() * size.height * 0.6;
+      double radius = 10 + random.nextDouble() * 40;
+      
+      canvas.drawCircle(
+        Offset(x, y), 
+        radius, 
+        Paint()
+          ..color = Colors.white.withOpacity(0.04)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8
+      );
+    }
+    
+    // Noktalar
+    final dotPaint = Paint()
+      ..color = Colors.white.withOpacity(0.2)
+      ..style = PaintingStyle.fill;
+      
+    for (int i = 0; i < 30; i++) {
+      double x = random.nextDouble() * size.width;
+      double y = random.nextDouble() * size.height * 0.7;
+      double radius = 1 + random.nextDouble() * 2;
+      
+      canvas.drawCircle(Offset(x, y), radius, dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return false;
   }
 }
