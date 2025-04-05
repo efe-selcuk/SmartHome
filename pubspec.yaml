@@ -77,6 +77,14 @@ flutter:
   assets:
     - .env
     - assets/.env
+    - assets/images/
+    - assets/images/adam.jpg
+    - assets/images/siyah.jpg
+    - assets/images/sari.jpg
+    - assets/images/kel.jpg
+    - assets/images/cocuk.jpg
+    - assets/images/kadin.jpg
+    - assets/images/ciddi.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

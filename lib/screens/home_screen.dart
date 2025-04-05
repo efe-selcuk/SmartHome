@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   User? user;
   String firstName = '';
   String lastName = '';
+  String profilePicture = 'assets/images/adam.jpg'; // Default profile picture
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -67,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           firstName = doc['firstName'] ?? 'Ad Bulunamadı';
           lastName = doc['lastName'] ?? 'Soyad Bulunamadı';
+          profilePicture = doc['profilePicture'] ?? 'assets/images/adam.jpg';
         });
       }
     } catch (e) {
@@ -400,13 +402,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                         ],
                                       ),
-                                      child: CircleAvatar(
-                                        radius: 20,
-                                        backgroundColor: Colors.white.withOpacity(0.2),
-                                        child: Icon(
-                                          Icons.person,
-                                          size: 24,
-                                          color: Colors.white,
+                                      child: GestureDetector(
+                                        onTap: _showProfilePictureSelectionDialog,
+                                        child: CircleAvatar(
+                                          radius: 20,
+                                          backgroundColor: Colors.white.withOpacity(0.2),
+                                          backgroundImage: AssetImage(profilePicture),
                                         ),
                                       ),
                                     ),
@@ -992,13 +993,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 2,
                           ),
                         ),
-                        child: CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                          child: Icon(
-                            Icons.person,
-                            size: 40,
-                            color: Theme.of(context).primaryColor,
+                        child: GestureDetector(
+                          onTap: _showProfilePictureSelectionDialog,
+                          child: CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                            backgroundImage: AssetImage(profilePicture),
                           ),
                         ),
                       ),
@@ -1699,6 +1699,194 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
+  }
+
+  void _showProfilePictureSelectionDialog() {
+    final List<String> availableImages = [
+      'assets/images/adam.jpg',
+      'assets/images/siyah.jpg',
+      'assets/images/sari.jpg',
+      'assets/images/kel.jpg',
+      'assets/images/cocuk.jpg',
+      'assets/images/kadin.jpg',
+      'assets/images/ciddi.jpg',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 10,
+          backgroundColor: Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white,
+                  Colors.grey[50]!,
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: Offset(0, 5),
+                          )
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Profil Fotoğrafı Seç',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 30),
+                Container(
+                  height: 300,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.grey[50],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: GridView.builder(
+                    padding: EdgeInsets.all(12),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: availableImages.length,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onTap: () {
+                          _updateProfilePicture(availableImages[index]);
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: profilePicture == availableImages[index]
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 5,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.asset(
+                              availableImages[index],
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[600],
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Vazgeç',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _updateProfilePicture(String imagePath) async {
+    if (user != null) {
+      try {
+        await _firestore.collection('users').doc(user!.uid).update({
+          'profilePicture': imagePath,
+        });
+        setState(() {
+          profilePicture = imagePath;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profil fotoğrafı güncellendi'),
+            backgroundColor: Theme.of(context).primaryColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        print("Error updating profile picture: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profil fotoğrafı güncellenirken bir hata oluştu'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
 
