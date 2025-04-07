@@ -1,8 +1,48 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:smarthome/screens/automation_screen.dart'; // AutomationRule sınıfını kullanmak için import
 
 class SensorService {
+  // Otomasyon kurallarını uygulama metodu
+  static Future<bool> applyAutomationRule(
+      String room, AutomationRule rule, Map<String, double> sensorData) async {
+    if (!rule.isEnabled) return false;
+
+    double temperature = sensorData['temperature'] ?? 0.0;
+    double humidity = sensorData['humidity'] ?? 0.0;
+    bool shouldTurnOnAC = false;
+
+    // Sıcaklık eşiği kontrolü (büyük/küçük karşılaştırma)
+    if (rule.isTemperatureAbove) {
+      // Sıcaklık eşiğin üzerindeyse
+      shouldTurnOnAC = temperature > rule.temperatureThreshold;
+    } else {
+      // Sıcaklık eşiğin altındaysa
+      shouldTurnOnAC = temperature < rule.temperatureThreshold;
+    }
+
+    // Nem eşiği kontrolü (büyük/küçük karşılaştırma)
+    if (rule.isHumidityAbove) {
+      // Nem eşiğin üzerindeyse
+      shouldTurnOnAC = shouldTurnOnAC || humidity > rule.humidityThreshold;
+    } else {
+      // Nem eşiğin altındaysa
+      shouldTurnOnAC = shouldTurnOnAC || humidity < rule.humidityThreshold;
+    }
+
+    if (shouldTurnOnAC) {
+      // Klimayı aç ve hedef sıcaklığı ayarla
+      await setACStatus(true);
+      await setACTemperature(rule.targetTemperature);
+      print(
+          'Otomasyon kuralı uygulandı: $room odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
+      return true;
+    }
+
+    return false;
+  }
+
   static const String apiUrl = 'http://192.168.1.5'; // ESP32'nin IP adresi
 
   // Her odanın GPIO pinini belirleyelim
@@ -15,7 +55,8 @@ class SensorService {
   };
 
   // Periyodik veri güncelleme
-  static void startPeriodicUpdates(Function(Map<String, double>) onDataReceived) {
+  static void startPeriodicUpdates(
+      Function(Map<String, double>) onDataReceived) {
     Timer.periodic(Duration(seconds: 5), (timer) async {
       Map<String, double> sensorData = await fetchSensorData();
       onDataReceived(sensorData);
@@ -48,7 +89,8 @@ class SensorService {
   static Future<void> controlLight(int room, bool isOn) async {
     final endpoint = roomEndpoints[room];
     if (endpoint != null) {
-      final response = await http.get(Uri.parse('$apiUrl$endpoint?status=${isOn ? "on" : "off"}'));
+      final response = await http
+          .get(Uri.parse('$apiUrl$endpoint?status=${isOn ? "on" : "off"}'));
 
       if (response.statusCode == 200) {
         print('Oda $room ışığı ${isOn ? "açıldı" : "kapandı"}');
@@ -63,22 +105,24 @@ class SensorService {
   // Oda sıcaklık değerini ayarla (Klima için örnek)
   static Future<void> controlClima(int room, double temperature) async {
     final endpoint = '/room$room/clima';
-    final response = await http.get(Uri.parse('$apiUrl$endpoint?temperature=$temperature'));
+    final response =
+        await http.get(Uri.parse('$apiUrl$endpoint?temperature=$temperature'));
 
     if (response.statusCode == 200) {
-      print('Oda $room kliması ${temperature.toStringAsFixed(1)}°C\'ye ayarlandı');
+      print(
+          'Oda $room kliması ${temperature.toStringAsFixed(1)}°C\'ye ayarlandı');
     } else {
       print('Klima kontrol edilemedi');
     }
   }
 
   // Yeni AC kontrol metotları
-  
+
   // AC durumunu al
   static Future<Map<String, dynamic>> getACStatus() async {
     try {
       final response = await http.get(Uri.parse('$apiUrl/status'));
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data;
@@ -90,12 +134,13 @@ class SensorService {
       return {'status': 'unknown', 'temperature': 22};
     }
   }
-  
+
   // AC'yi aç/kapa
   static Future<bool> setACStatus(bool isOn) async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/ac?status=${isOn ? "on" : "off"}'));
-      
+      final response =
+          await http.get(Uri.parse('$apiUrl/ac?status=${isOn ? "on" : "off"}'));
+
       if (response.statusCode == 200) {
         print('AC ${isOn ? "açıldı" : "kapandı"}');
         return true;
@@ -108,15 +153,16 @@ class SensorService {
       return false;
     }
   }
-  
+
   // AC sıcaklığını ayarla (17-30 arasında)
   static Future<bool> setACTemperature(int temperature) async {
     // Sıcaklık değerini 17-30 arasında sınırla
     temperature = temperature.clamp(17, 30);
-    
+
     try {
-      final response = await http.get(Uri.parse('$apiUrl/ac?temp=$temperature'));
-      
+      final response =
+          await http.get(Uri.parse('$apiUrl/ac?temp=$temperature'));
+
       if (response.statusCode == 200) {
         print('AC sıcaklığı $temperature°C\'ye ayarlandı');
         return true;
@@ -133,7 +179,8 @@ class SensorService {
   // Oda ışık rengini ayarlama
   static Future<void> controlLightColor(int room, int colorValue) async {
     final endpoint = '/room$room/light/color';
-    final response = await http.get(Uri.parse('$apiUrl$endpoint?color=$colorValue'));
+    final response =
+        await http.get(Uri.parse('$apiUrl$endpoint?color=$colorValue'));
 
     if (response.statusCode == 200) {
       print('Oda $room ışık rengi ayarlandı');
@@ -141,14 +188,14 @@ class SensorService {
       print('Işık rengi ayarlanamadı');
     }
   }
-  
+
   // IR LED Kontrolleri - Yeni Eklenen Fonksiyonlar
-  
+
   // IR LED durumunu al
   static Future<Map<String, dynamic>> getIRLedStatus() async {
     try {
       final response = await http.get(Uri.parse('$apiUrl/status'));
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return {
@@ -162,12 +209,13 @@ class SensorService {
       return {'isOn': false};
     }
   }
-  
+
   // IR LED'i aç/kapa
   static Future<bool> controlIRLed(bool isOn) async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/irled?status=${isOn ? "on" : "off"}'));
-      
+      final response = await http
+          .get(Uri.parse('$apiUrl/irled?status=${isOn ? "on" : "off"}'));
+
       if (response.statusCode == 200) {
         print('IR LED ${isOn ? "açıldı" : "kapatıldı"}');
         return true;
@@ -180,17 +228,17 @@ class SensorService {
       return false;
     }
   }
-  
+
   // IR LED rengini değiştir
   static Future<bool> setIRLedColor(String color) async {
     // Geçerli renk değerlerini kontrol et
     if (!['red', 'green', 'blue', 'white'].contains(color)) {
       return false;
     }
-    
+
     try {
       final response = await http.get(Uri.parse('$apiUrl/irled?color=$color'));
-      
+
       if (response.statusCode == 200) {
         print('IR LED rengi $color olarak ayarlandı');
         return true;
@@ -203,17 +251,18 @@ class SensorService {
       return false;
     }
   }
-  
+
   // IR LED efektini değiştir
   static Future<bool> setIRLedEffect(String effect) async {
     // Geçerli efekt değerlerini kontrol et
     if (!['flash', 'strobe', 'fade', 'smooth'].contains(effect)) {
       return false;
     }
-    
+
     try {
-      final response = await http.get(Uri.parse('$apiUrl/irled?effect=$effect'));
-      
+      final response =
+          await http.get(Uri.parse('$apiUrl/irled?effect=$effect'));
+
       if (response.statusCode == 200) {
         print('IR LED efekti $effect olarak ayarlandı');
         return true;
@@ -226,12 +275,12 @@ class SensorService {
       return false;
     }
   }
-  
+
   // IR LED parlaklığını artır
   static Future<bool> increaseIRLedBrightness() async {
     try {
       final response = await http.get(Uri.parse('$apiUrl/irled?brightness=up'));
-      
+
       if (response.statusCode == 200) {
         print('IR LED parlaklığı artırıldı');
         return true;
@@ -244,12 +293,13 @@ class SensorService {
       return false;
     }
   }
-  
+
   // IR LED parlaklığını azalt
   static Future<bool> decreaseIRLedBrightness() async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/irled?brightness=down'));
-      
+      final response =
+          await http.get(Uri.parse('$apiUrl/irled?brightness=down'));
+
       if (response.statusCode == 200) {
         print('IR LED parlaklığı azaltıldı');
         return true;

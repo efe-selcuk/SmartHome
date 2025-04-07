@@ -3,6 +3,7 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/screens/ac_detail_screen.dart';
+import 'package:smarthome/screens/automation_screen.dart'; // AutomationRule sınıfını kullanmak için import
 import 'dart:async';
 
 class RoomDetailsScreen extends StatefulWidget {
@@ -19,8 +20,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool isClimaOn = false;
   bool isLightOn = false; // Işık durumu sadece switch ile kontrol edilecek
   bool isTvOn = false;
-  bool _isDisposed = false;  // Eklenen değişken
-  bool isIRLedOn = false;    // IR LED durumu
+  bool _isDisposed = false; // Eklenen değişken
+  bool isIRLedOn = false; // IR LED durumu
   double? temperature;
   double? humidity;
   double lightIntensity = 50.0;
@@ -51,11 +52,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       'climaTemp': climaTemperature,
       'lightIntensity': lightIntensity,
       'isClimaOn': isClimaOn,
-      'isLightOn': isLightOn,  // Işık durumu, switch'e bağlı olarak
+      'isLightOn': isLightOn, // Işık durumu, switch'e bağlı olarak
       'isTvOn': isTvOn,
       'temperature': temperature,
       'humidity': humidity,
-      'isIRLedOn': isIRLedOn,  // IR LED durumu eklendi
+      'isIRLedOn': isIRLedOn, // IR LED durumu eklendi
       'irLedColor': irLedColor, // IR LED rengi eklendi
       'irLedEffect': irLedEffect, // IR LED efekti eklendi
     };
@@ -112,7 +113,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _isDisposed = false;  // initState'de false olarak ayarla
+    _isDisposed = false; // initState'de false olarak ayarla
     _loadRoomData();
     // Periyodik veri güncellemeleri başlatılıyor
     _startPeriodicUpdates();
@@ -134,7 +135,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   @override
   void dispose() {
-    _isDisposed = true;  // dispose edildiğinde true yap
+    _isDisposed = true; // dispose edildiğinde true yap
     // Periyodik güncellemeleri durduruyoruz
     _stopPeriodicUpdates();
     super.dispose();
@@ -143,8 +144,33 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   // Periyodik veri güncellemelerini başlat
   void _startPeriodicUpdates() {
     _timer = Timer.periodic(Duration(seconds: 10), (timer) {
-      fetchSensorData();  // 10 saniyede bir veriyi güncelle
+      fetchSensorData(); // 10 saniyede bir veriyi güncelle
+      _checkAutomationRules(); // Otomasyon kurallarını kontrol et
     });
+  }
+
+  // Otomasyon kurallarını kontrol et ve uygula
+  Future<void> _checkAutomationRules() async {
+    try {
+      // Oda için otomasyon kurallarını yükle
+      final roomData = await _databaseService.loadRoomData(widget.roomName);
+      if (roomData != null && roomData.containsKey('automationRule')) {
+        Map<String, dynamic> ruleData = roomData['automationRule'];
+        final rule = AutomationRule.fromMap(ruleData);
+
+        // Sensör verilerini al
+        Map<String, double> sensorData = {
+          'temperature': temperature ?? 0.0,
+          'humidity': humidity ?? 0.0,
+        };
+
+        // Otomasyon kuralını uygula
+        await SensorService.applyAutomationRule(
+            widget.roomName, rule, sensorData);
+      }
+    } catch (e) {
+      print('Otomasyon kuralları kontrol edilirken hata: $e');
+    }
   }
 
   // AC durumunu periyodik olarak güncelle
@@ -155,13 +181,14 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         timer.cancel();
         return;
       }
-      
+
       try {
-        Map<String, dynamic>? roomData = await _databaseService.loadRoomData(widget.roomName);
+        Map<String, dynamic>? roomData =
+            await _databaseService.loadRoomData(widget.roomName);
         if (roomData != null && mounted) {
           bool newIsClimaOn = roomData['isClimaOn'] ?? false;
           double newClimaTemp = roomData['climaTemp'] ?? 22.0;
-          
+
           // Sadece değişiklik varsa state'i güncelle
           if (newIsClimaOn != isClimaOn || newClimaTemp != climaTemperature) {
             setState(() {
@@ -188,7 +215,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   // Firestore'dan odadaki verileri yükleme
   Future<void> _loadRoomData() async {
-    Map<String, dynamic>? roomData = await _databaseService.loadRoomData(widget.roomName);
+    Map<String, dynamic>? roomData =
+        await _databaseService.loadRoomData(widget.roomName);
 
     if (roomData != null) {
       setState(() {
@@ -197,11 +225,12 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         climaTemperature = roomData['climaTemp'];
         lightIntensity = roomData['lightIntensity'];
         isClimaOn = roomData['isClimaOn'];
-        isLightOn = roomData['isLightOn'] ?? false;  // Işık durumu, eğer belirtilmediyse false
+        isLightOn = roomData['isLightOn'] ??
+            false; // Işık durumu, eğer belirtilmediyse false
         isTvOn = roomData['isTvOn'];
         temperature = roomData['temperature'];
         humidity = roomData['humidity'];
-        
+
         // IR LED verileri
         isIRLedOn = roomData['isIRLedOn'] ?? false;
         irLedColor = roomData['irLedColor'] ?? 'white';
@@ -217,10 +246,10 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     setState(() {
       isLightOn = isOn;
     });
-    
+
     // Odanın adına göre oda numarasını belirle
     int roomNumber;
-    
+
     switch (widget.roomName.toLowerCase()) {
       case 'salon':
         roomNumber = 1;
@@ -254,11 +283,13 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         }
         break;
     }
-    
-    print('Oda: ${widget.roomName}, Oda Numarası: $roomNumber olarak belirlendi');
-    
-    await SensorService.controlLight(roomNumber, isOn);  // Belirlenen oda numarasına göre ESP32'ye komut gönder
-    _saveRoomData();  // Veriyi kaydet
+
+    print(
+        'Oda: ${widget.roomName}, Oda Numarası: $roomNumber olarak belirlendi');
+
+    await SensorService.controlLight(roomNumber,
+        isOn); // Belirlenen oda numarasına göre ESP32'ye komut gönder
+    _saveRoomData(); // Veriyi kaydet
   }
 
   // IR LED açma/kapatma
@@ -471,7 +502,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                   ),
                 ),
                 SizedBox(height: 24),
-                
+
                 // Cihaz Listesi Başlığı ve Ekleme Butonu
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -495,13 +526,14 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: 16),
-                
+
                 // Cihaz Listesi
                 devices.isEmpty
                     ? Center(
@@ -761,7 +793,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                           data: SliderTheme.of(context).copyWith(
                             activeTrackColor: Theme.of(context).primaryColor,
                             thumbColor: Theme.of(context).primaryColor,
-                            overlayColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                            overlayColor:
+                                Theme.of(context).primaryColor.withOpacity(0.2),
                           ),
                           child: Slider(
                             value: lightIntensity,
@@ -913,7 +946,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   Widget _buildTemperatureButton(int temp) {
     bool isSelected = climaTemperature.round() == temp;
-    
+
     return GestureDetector(
       onTap: () {
         _setACTemperature(temp);
@@ -975,13 +1008,13 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          gradient: isIRLedOn 
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: _getGradientColors(),
-              ) 
-            : null,
+          gradient: isIRLedOn
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: _getGradientColors(),
+                )
+              : null,
           color: isIRLedOn ? null : Colors.white,
         ),
         child: Theme(
@@ -989,7 +1022,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             dividerColor: Colors.transparent,
             unselectedWidgetColor: isIRLedOn ? Colors.white : Colors.grey,
             colorScheme: ColorScheme.fromSwatch().copyWith(
-              secondary: isIRLedOn ? Colors.white : Theme.of(context).primaryColor,
+              secondary:
+                  isIRLedOn ? Colors.white : Theme.of(context).primaryColor,
             ),
           ),
           child: ExpansionTile(
@@ -1028,92 +1062,92 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             childrenPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
             expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: isIRLedOn 
-              ? [
-                  Divider(color: Colors.white30),
-                  SizedBox(height: 12),
-                  Text(
-                    'Renk',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            children: isIRLedOn
+                ? [
+                    Divider(color: Colors.white30),
+                    SizedBox(height: 12),
+                    Text(
+                      'Renk',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 12),
-                  // Renk seçim butonları
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildColorButton('red', 'Kırmızı', Colors.red),
-                      _buildColorButton('green', 'Yeşil', Colors.green),
-                      _buildColorButton('blue', 'Mavi', Colors.blue),
-                      _buildColorButton('white', 'Beyaz', Colors.white),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Efektler',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  // Efekt seçim butonları
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
+                    SizedBox(height: 12),
+                    // Renk seçim butonları
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildEffectButton('flash', 'Flash'),
-                        SizedBox(width: 10),
-                        _buildEffectButton('strobe', 'Strobe'),
-                        SizedBox(width: 10),
-                        _buildEffectButton('fade', 'Fade'),
-                        SizedBox(width: 10),
-                        _buildEffectButton('smooth', 'Smooth'),
+                        _buildColorButton('red', 'Kırmızı', Colors.red),
+                        _buildColorButton('green', 'Yeşil', Colors.green),
+                        _buildColorButton('blue', 'Mavi', Colors.blue),
+                        _buildColorButton('white', 'Beyaz', Colors.white),
                       ],
                     ),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Parlaklık',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    SizedBox(height: 20),
+                    Text(
+                      'Efektler',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 12),
-                  // Parlaklık kontrol butonları
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _decreaseIRLedBrightness,
-                        child: Icon(Icons.remove, color: Colors.white),
-                        style: ElevatedButton.styleFrom(
-                          shape: CircleBorder(),
-                          padding: EdgeInsets.all(12),
-                          backgroundColor: Colors.black38,
-                        ),
+                    SizedBox(height: 12),
+                    // Efekt seçim butonları
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildEffectButton('flash', 'Flash'),
+                          SizedBox(width: 10),
+                          _buildEffectButton('strobe', 'Strobe'),
+                          SizedBox(width: 10),
+                          _buildEffectButton('fade', 'Fade'),
+                          SizedBox(width: 10),
+                          _buildEffectButton('smooth', 'Smooth'),
+                        ],
                       ),
-                      SizedBox(width: 30),
-                      ElevatedButton(
-                        onPressed: _increaseIRLedBrightness,
-                        child: Icon(Icons.add, color: Colors.white),
-                        style: ElevatedButton.styleFrom(
-                          shape: CircleBorder(),
-                          padding: EdgeInsets.all(12),
-                          backgroundColor: Colors.black38,
-                        ),
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Parlaklık',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                ]
-              : [],
+                    ),
+                    SizedBox(height: 12),
+                    // Parlaklık kontrol butonları
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _decreaseIRLedBrightness,
+                          child: Icon(Icons.remove, color: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            shape: CircleBorder(),
+                            padding: EdgeInsets.all(12),
+                            backgroundColor: Colors.black38,
+                          ),
+                        ),
+                        SizedBox(width: 30),
+                        ElevatedButton(
+                          onPressed: _increaseIRLedBrightness,
+                          child: Icon(Icons.add, color: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            shape: CircleBorder(),
+                            padding: EdgeInsets.all(12),
+                            backgroundColor: Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                  ]
+                : [],
           ),
         ),
       ),
