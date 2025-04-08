@@ -3,7 +3,8 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/screens/ac_detail_screen.dart';
-import 'package:smarthome/screens/automation_screen.dart'; // AutomationRule sınıfını kullanmak için import
+import 'package:smarthome/screens/automation_screen.dart';
+import 'package:smarthome/screens/tv_remote_screen.dart'; // TV Remote Screen import edildi
 import 'dart:async';
 
 class RoomDetailsScreen extends StatefulWidget {
@@ -143,8 +144,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   // Periyodik veri güncellemelerini başlat
   void _startPeriodicUpdates() {
-    _timer = Timer.periodic(Duration(seconds: 10), (timer) {
-      fetchSensorData(); // 10 saniyede bir veriyi güncelle
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      fetchSensorData(); // 1 saniyede bir veriyi güncelle
       _checkAutomationRules(); // Otomasyon kurallarını kontrol et
     });
   }
@@ -158,15 +159,37 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         Map<String, dynamic> ruleData = roomData['automationRule'];
         final rule = AutomationRule.fromMap(ruleData);
 
-        // Sensör verilerini al
+        // Sensör verilerini kullan - fetchSensorData() çağırmadan mevcut değerleri kullan
         Map<String, double> sensorData = {
           'temperature': temperature ?? 0.0,
           'humidity': humidity ?? 0.0,
         };
 
         // Otomasyon kuralını uygula
-        await SensorService.applyAutomationRule(
+        bool ruleApplied = await SensorService.applyAutomationRule(
             widget.roomName, rule, sensorData);
+
+        // Eğer otomasyon kuralı uygulandıysa (klima açıldıysa)
+        if (ruleApplied && mounted) {
+          // Yerel state'i güncelle
+          setState(() {
+            isClimaOn = true;
+            climaTemperature = rule.targetTemperature.toDouble();
+          });
+
+          // Veritabanını güncelle - sadece değişiklik varsa
+          if (!isClimaOn ||
+              climaTemperature != rule.targetTemperature.toDouble()) {
+            await _databaseService.saveRoomData(widget.roomName, {
+              'isClimaOn': true,
+              'climaTemp': rule.targetTemperature.toDouble(),
+              'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+            });
+          }
+
+          print(
+              'Otomasyon kuralı uygulandı ve UI güncellendi: ${widget.roomName} odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
+        }
       }
     } catch (e) {
       print('Otomasyon kuralları kontrol edilirken hata: $e');
@@ -993,6 +1016,16 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        onTap: () {
+          if (deviceName == 'Akıllı TV') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TvRemoteScreen(roomName: widget.roomName),
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -1126,22 +1159,22 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: _decreaseIRLedBrightness,
-                          child: Icon(Icons.remove, color: Colors.white),
                           style: ElevatedButton.styleFrom(
                             shape: CircleBorder(),
                             padding: EdgeInsets.all(12),
                             backgroundColor: Colors.black38,
                           ),
+                          child: Icon(Icons.remove, color: Colors.white),
                         ),
                         SizedBox(width: 30),
                         ElevatedButton(
                           onPressed: _increaseIRLedBrightness,
-                          child: Icon(Icons.add, color: Colors.white),
                           style: ElevatedButton.styleFrom(
                             shape: CircleBorder(),
                             padding: EdgeInsets.all(12),
                             backgroundColor: Colors.black38,
                           ),
+                          child: Icon(Icons.add, color: Colors.white),
                         ),
                       ],
                     ),

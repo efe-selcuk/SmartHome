@@ -32,12 +32,22 @@ class SensorService {
     }
 
     if (shouldTurnOnAC) {
-      // Klimayı aç ve hedef sıcaklığı ayarla
-      await setACStatus(true);
-      await setACTemperature(rule.targetTemperature);
-      print(
-          'Otomasyon kuralı uygulandı: $room odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
-      return true;
+      // Klimayı aç ve hedef sıcaklığı ayarla - paralel çalıştır
+      // İki işlemi aynı anda başlat ve sonuçlarını bekle
+      final results = await Future.wait(
+          [setACStatus(true), setACTemperature(rule.targetTemperature)]);
+
+      // Her iki işlem de başarılı olduysa true döndür
+      bool success = results[0] && results[1];
+
+      if (success) {
+        print(
+            'Otomasyon kuralı uygulandı: $room odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
+        return true;
+      } else {
+        print('Otomasyon kuralı uygulanamadı: İşlemlerden biri başarısız oldu');
+        return false;
+      }
     }
 
     return false;
@@ -309,6 +319,239 @@ class SensorService {
       }
     } catch (e) {
       print('IR LED parlaklığı azaltılırken hata: $e');
+      return false;
+    }
+  }
+
+  // TV Kontrol Metotları
+
+  // TV durumunu al - Simülasyon
+  static Future<Map<String, dynamic>> getTvStatus(String roomName) async {
+    try {
+      // Gerçek uygulamada burada sunucuya istek yapılır
+      // Şimdilik simülasyon yapıyoruz
+      await Future.delayed(Duration(milliseconds: 300)); // Gerçek istek simülasyonu
+
+      // Simülasyon verileri
+      return {
+        'isOn': true,
+        'volume': 50,
+        'channel': 1,
+        'isMuted': false,
+      };
+    } catch (e) {
+      print('TV durumu alınırken hata: $e');
+      // Varsayılan değerler döndür
+      return {
+        'isOn': false,
+        'volume': 50,
+        'channel': 1,
+        'isMuted': false,
+      };
+    }
+  }
+
+  // TV'yi aç/kapa - Simülasyon
+  static Future<bool> controlTv(String roomName, bool isOn) async {
+    try {
+      // Gerçek uygulamada burada sunucuya istek yapılır
+      // Şimdilik simülasyon yapıyoruz
+      await Future.delayed(Duration(milliseconds: 300)); // Gerçek istek simülasyonu
+      
+      print('TV ${isOn ? "açıldı" : "kapatıldı"}');
+      return true;
+    } catch (e) {
+      print('TV kontrol edilirken hata: $e');
+      return false;
+    }
+  }
+
+  // TV ses seviyesini ayarla - Simülasyon
+  static Future<bool> setTvVolume(String roomName, int volume) async {
+    try {
+      // Gerçek uygulamada burada sunucuya istek yapılır
+      // Şimdilik simülasyon yapıyoruz
+      await Future.delayed(Duration(milliseconds: 300)); // Gerçek istek simülasyonu
+      
+      print('TV ses seviyesi $volume olarak ayarlandı');
+      return true;
+    } catch (e) {
+      print('TV ses seviyesi ayarlanırken hata: $e');
+      return false;
+    }
+  }
+
+  // TV sesini kapat/aç - Simülasyon
+  static Future<bool> toggleTvMute(String roomName) async {
+    try {
+      // Gerçek uygulamada burada sunucuya istek yapılır
+      // Şimdilik simülasyon yapıyoruz
+      await Future.delayed(Duration(milliseconds: 300)); // Gerçek istek simülasyonu
+      
+      print('TV sessiz modu değiştirildi');
+      return true;
+    } catch (e) {
+      print('TV sessiz modu değiştirilirken hata: $e');
+      return false;
+    }
+  }
+
+  // TV kanalını değiştir - Simülasyon
+  static Future<bool> setTvChannel(String roomName, int channel) async {
+    try {
+      // Gerçek uygulamada burada sunucuya istek yapılır
+      // Şimdilik simülasyon yapıyoruz
+      await Future.delayed(Duration(milliseconds: 300)); // Gerçek istek simülasyonu
+      
+      print('TV kanalı $channel olarak değiştirildi');
+      return true;
+    } catch (e) {
+      print('TV kanalı değiştirilirken hata: $e');
+      return false;
+    }
+  }
+
+  // TV uygulamasını başlat - Simülasyon
+  static Future<bool> launchTvApp(String roomName, String appName) async {
+    try {
+      // Gerçek uygulamada burada sunucuya istek yapılır
+      // Şimdilik simülasyon yapıyoruz
+      await Future.delayed(Duration(milliseconds: 300)); // Gerçek istek simülasyonu
+      
+      print('TV uygulaması $appName başlatıldı');
+      return true;
+    } catch (e) {
+      print('TV uygulaması başlatılırken hata: $e');
+      return false;
+    }
+  }
+
+  // TV Kumanda Fonksiyonları - Gerçek ESP32 kontrolü için
+  
+  // TV Güç Kontrolü
+  static Future<bool> controlTvPower() async {
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?power=toggle'));
+      
+      if (response.statusCode == 200) {
+        print('TV güç durumu değiştirildi');
+        return true;
+      } else {
+        print('TV güç durumu değiştirilemedi');
+        return false;
+      }
+    } catch (e) {
+      print('TV güç kontrolü sırasında hata: $e');
+      return false;
+    }
+  }
+  
+  // TV Ses Kontrolü
+  static Future<bool> controlTvVolume(String action) async {
+    if (!['up', 'down', 'mute'].contains(action)) {
+      print('Geçersiz ses kontrol komutu: $action');
+      return false;
+    }
+    
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?volume=$action'));
+      
+      if (response.statusCode == 200) {
+        print('TV ses seviyesi $action işlemi uygulandı');
+        return true;
+      } else {
+        print('TV ses seviyesi değiştirilemedi');
+        return false;
+      }
+    } catch (e) {
+      print('TV ses kontrolü sırasında hata: $e');
+      return false;
+    }
+  }
+  
+  // TV Kanal Kontrolü
+  static Future<bool> controlTvChannel(String action) async {
+    if (!['up', 'down'].contains(action)) {
+      print('Geçersiz kanal kontrol komutu: $action');
+      return false;
+    }
+    
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?channel=$action'));
+      
+      if (response.statusCode == 200) {
+        print('TV kanal $action işlemi uygulandı');
+        return true;
+      } else {
+        print('TV kanal değiştirilemedi');
+        return false;
+      }
+    } catch (e) {
+      print('TV kanal kontrolü sırasında hata: $e');
+      return false;
+    }
+  }
+  
+  // TV Yön Tuşları Kontrolü
+  static Future<bool> controlTvDirection(String direction) async {
+    if (!['up', 'down', 'left', 'right'].contains(direction)) {
+      print('Geçersiz yön komutu: $direction');
+      return false;
+    }
+    
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?direction=$direction'));
+      
+      if (response.statusCode == 200) {
+        print('TV yön tuşu $direction uygulandı');
+        return true;
+      } else {
+        print('TV yön tuşu uygulanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('TV yön kontrolü sırasında hata: $e');
+      return false;
+    }
+  }
+  
+  // TV OK Tuşu Kontrolü
+  static Future<bool> controlTvOkButton() async {
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?button=ok'));
+      
+      if (response.statusCode == 200) {
+        print('TV OK tuşu uygulandı');
+        return true;
+      } else {
+        print('TV OK tuşu uygulanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('TV OK tuşu kontrolü sırasında hata: $e');
+      return false;
+    }
+  }
+  
+  // TV Sayısal Tuş Kontrolü
+  static Future<bool> controlTvNumberButton(int number) async {
+    if (number < 0 || number > 9) {
+      print('Geçersiz sayı: $number');
+      return false;
+    }
+    
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?button=$number'));
+      
+      if (response.statusCode == 200) {
+        print('TV $number tuşu uygulandı');
+        return true;
+      } else {
+        print('TV sayısal tuşu uygulanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('TV sayısal tuş kontrolü sırasında hata: $e');
       return false;
     }
   }
