@@ -7,7 +7,6 @@ import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/screens/security_screen.dart'; // Import the security screen
 import 'package:smarthome/screens/profile_screen.dart';
-import 'package:smarthome/screens/notifications_screen.dart';
 import 'package:smarthome/screens/settings_screen.dart';
 import 'package:smarthome/screens/help_screen.dart';
 import 'package:smarthome/screens/automation_screen.dart'; // Import the automation screen
@@ -276,9 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'Profil':
         screen = ProfileScreen();
         break;
-      case 'Bildirimler':
-        screen = NotificationsScreen();
-        break;
       case 'Ayarlar':
         screen = SettingsScreen();
         break;
@@ -456,16 +452,6 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             actions: [
-              IconButton(
-                icon: Icon(
-                  Icons.notifications_none_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                onPressed: () {
-                  // Bildirimler için
-                },
-              ),
               Builder(
                 builder: (context) {
                   return IconButton(
@@ -1083,7 +1069,6 @@ class _HomeScreenState extends State<HomeScreen> {
               'Ayarlar',
               [
                 _buildDrawerItem(Icons.person, 'Profil', () => navigateTo('Profil')),
-                _buildDrawerItem(Icons.notifications, 'Bildirimler', () => navigateTo('Bildirimler')),
                 _buildDrawerItem(Icons.settings, 'Ayarlar', () => navigateTo('Ayarlar')),
                 _buildDrawerItem(Icons.help_outline, 'Yardım', () => navigateTo('Yardım')),
               ],

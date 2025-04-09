@@ -23,7 +23,7 @@ class ACDetailScreen extends StatefulWidget {
 
 class _ACDetailScreenState extends State<ACDetailScreen> with SingleTickerProviderStateMixin {
   bool isACOn = false;
-  double temperature = 24.0;
+  double temperature = 25.0;
   bool _isDisposed = false;
   Timer? _statusUpdateTimer;
   final DatabaseService _databaseService = DatabaseService();
@@ -143,6 +143,12 @@ class _ACDetailScreenState extends State<ACDetailScreen> with SingleTickerProvid
       if (success && mounted) {
         setState(() {
           isACOn = value;
+          // Klimayı açarken sıcaklık 25 derece olsun
+          if (value) {
+            temperature = 25.0;
+            // Sıcaklığı da API'ye gönder
+            SensorService.setACTemperature(25);
+          }
         });
         
         // Animasyon efekti
@@ -217,6 +223,137 @@ class _ACDetailScreenState extends State<ACDetailScreen> with SingleTickerProvid
       }
     } catch (e) {
       print('Firestore\'dan AC durumu yüklenirken hata: $e');
+    }
+  }
+
+  // Fan hızını ayarlamak için metod
+  Future<void> _setFanSpeed(String speedOption) async {
+    try {
+      // UI gösterimi için Türkçe-İngilizce dönüşümü
+      String apiSpeedValue;
+      
+      // Türkçe seçeneğini API için uygun İngilizce değere dönüştür
+      switch (speedOption) {
+        case 'Düşük':
+          apiSpeedValue = 'low';
+          break;
+        case 'Orta':
+          apiSpeedValue = 'medium';
+          break;
+        case 'Yüksek':
+          apiSpeedValue = 'high';
+          break;
+        case 'Otomatik':
+          apiSpeedValue = 'auto';
+          break;
+        default:
+          apiSpeedValue = 'auto';
+          break;
+      }
+      
+      // API çağrısı yapılıyor
+      bool success = await SensorService.setACFanSpeed(apiSpeedValue);
+      
+      if (success) {
+        // Haptic geri bildirim
+        HapticFeedback.selectionClick();
+        
+        // Firestore'a fan hızını kaydet
+        await _databaseService.saveRoomData(widget.roomName, {
+          'fanSpeed': speedOption,
+          'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+        });
+        
+        if (mounted) {
+          // UI güncellendi, ek bir setState gerekli değil çünkü zaten onSelected'da güncelleniyor
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Fan hızı ayarlanamadı'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Fan hızı ayarlanırken hata: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fan hızı ayarlanamadı: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Modu ayarlamak için metod
+  Future<void> _setMode(String modeOption) async {
+    try {
+      // UI gösterimi için Türkçe-İngilizce dönüşümü
+      String apiModeValue;
+      
+      // Türkçe seçeneğini API için uygun İngilizce değere dönüştür
+      switch (modeOption) {
+        case 'Soğutma':
+          apiModeValue = 'cool';
+          break;
+        case 'Isıtma':
+          apiModeValue = 'heat';
+          break;
+        case 'Nem Alma':
+          apiModeValue = 'dry';
+          break;
+        case 'Fan':
+          apiModeValue = 'fan';
+          break;
+        case 'Otomatik':
+          apiModeValue = 'auto';
+          break;
+        default:
+          apiModeValue = 'cool';
+          break;
+      }
+      
+      // API çağrısı yapılıyor
+      bool success = await SensorService.setACMode(apiModeValue);
+      
+      if (success) {
+        // Haptic geri bildirim
+        HapticFeedback.selectionClick();
+        
+        // Firestore'a modu kaydet
+        await _databaseService.saveRoomData(widget.roomName, {
+          'acMode': modeOption,
+          'lastUpdated': DateTime.now().millisecondsSinceEpoch,
+        });
+        
+        if (mounted) {
+          // UI güncellendi, ek bir setState gerekli değil çünkü zaten onSelected'da güncelleniyor
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Klima modu ayarlanamadı'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Klima modu ayarlanırken hata: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Klima modu ayarlanamadı: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -555,11 +692,6 @@ class _ACDetailScreenState extends State<ACDetailScreen> with SingleTickerProvid
               },
             ),
             
-            SizedBox(height: 16),
-            
-            // Zaman Ayarı Kartı - Modern tasarım
-            _buildTimerCard(),
-            
             SizedBox(height: 24),
           ],
         ),
@@ -736,7 +868,16 @@ class _ACDetailScreenState extends State<ACDetailScreen> with SingleTickerProvid
                 return AnimatedContainer(
                   duration: Duration(milliseconds: 200),
                   child: InkWell(
-                    onTap: isACOn ? () => onSelected(option) : null,
+                    onTap: isACOn ? () {
+                      onSelected(option);
+                      
+                      // API çağrısını yap
+                      if (title == 'Fan Hızı') {
+                        _setFanSpeed(option);
+                      } else if (title == 'Mod') {
+                        _setMode(option);
+                      }
+                    } : null,
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -766,120 +907,6 @@ class _ACDetailScreenState extends State<ACDetailScreen> with SingleTickerProvid
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Zaman Ayarı Kartı
-  Widget _buildTimerCard() {
-    return Card(
-      elevation: 4,
-      shadowColor: Theme.of(context).primaryColor.withOpacity(0.2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.timer,
-                    color: Theme.of(context).primaryColor,
-                    size: 20,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Text(
-                  'Zamanlayıcı',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Klimayı belirli bir süre sonra otomatik kapatabilirsiniz',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: isACOn ? () {
-                    // Zamanlayıcı ayarlama (demo amaçlı)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Zamanlayıcı özelliği demo amaçlıdır')),
-                    );
-                  } : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Text('Ayarla'),
-                ),
-              ],
-            ),
-            if (isACOn) ...[
-              SizedBox(height: 12),
-              // Zaman seçim butonları
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildTimerOption('30 dk'),
-                    _buildTimerOption('1 saat'),
-                    _buildTimerOption('2 saat'),
-                    _buildTimerOption('4 saat'),
-                    _buildTimerOption('8 saat'),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Zaman Seçim Butonu
-  Widget _buildTimerOption(String time) {
-    return Container(
-      margin: EdgeInsets.only(right: 8),
-      child: OutlinedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$time için zamanlayıcı ayarlandı (demo)')),
-          );
-        },
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: Theme.of(context).primaryColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-        child: Text(time),
       ),
     );
   }

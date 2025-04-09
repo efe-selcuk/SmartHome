@@ -5,7 +5,7 @@ class HelpScreen extends StatelessWidget {
     {
       'question': 'Oda nasıl eklenir?',
       'answer':
-          'Ana ekranda sağ üst köşedeki "+" butonuna tıklayarak yeni bir oda ekleyebilirsiniz. Açılan menüden oda tipini seçin ve odanızı oluşturun.',
+          'Ana ekranda "Oda Ekle" butonuna tıklayarak yeni bir oda ekleyebilirsiniz. Açılan menüden oda tipini seçin ve odanızı oluşturun.',
     },
     {
       'question': 'Cihaz nasıl kontrol edilir?',
@@ -18,11 +18,6 @@ class HelpScreen extends StatelessWidget {
           'Güvenlik ekranından alarm sistemini aktif edebilir, kamera görüntülerini izleyebilir ve hareket sensörlerini yönetebilirsiniz.',
     },
     {
-      'question': 'Bildirimler nasıl özelleştirilir?',
-      'answer':
-          'Ayarlar > Bildirimler menüsünden hangi olaylar için bildirim almak istediğinizi seçebilirsiniz.',
-    },
-    {
       'question': 'Şifremi unuttum ne yapmalıyım?',
       'answer':
           'Giriş ekranındaki "Şifremi Unuttum" seçeneğini kullanarak e-posta adresinize sıfırlama bağlantısı gönderebilirsiniz.',
@@ -33,6 +28,8 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Yardım'),
@@ -54,7 +51,7 @@ class HelpScreen extends StatelessWidget {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
                 ),
               ),
             ),
@@ -67,6 +64,7 @@ class HelpScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
             ),
@@ -84,15 +82,15 @@ class HelpScreen extends StatelessWidget {
                   ),
                   _buildQuickHelpCard(
                     context,
-                    'Sorun Giderme',
-                    Icons.build_outlined,
-                    Colors.orange,
+                    'Oda Yönetimi',
+                    Icons.room_preferences,
+                    Colors.green,
                   ),
                   _buildQuickHelpCard(
                     context,
-                    'Güvenlik İpuçları',
-                    Icons.security,
-                    Colors.green,
+                    'Cihaz Bağlantısı',
+                    Icons.devices_other,
+                    Colors.purple,
                   ),
                 ],
               ),
@@ -106,6 +104,7 @@ class HelpScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
             ),
@@ -121,45 +120,6 @@ class HelpScreen extends StatelessWidget {
                 );
               },
             ),
-
-            // İletişim Seçenekleri
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'İletişime Geçin',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            _buildContactOption(
-              context,
-              'E-posta ile Destek',
-              'support@chakra.com',
-              Icons.email_outlined,
-              () {
-                // E-posta gönderme işlemi
-              },
-            ),
-            _buildContactOption(
-              context,
-              'Canlı Destek',
-              '7/24 Destek Hattı',
-              Icons.chat_outlined,
-              () {
-                // Canlı destek başlatma
-              },
-            ),
-            _buildContactOption(
-              context,
-              'Telefon ile Ara',
-              '+90 850 123 45 67',
-              Icons.phone_outlined,
-              () {
-                // Telefon araması başlatma
-              },
-            ),
             SizedBox(height: 24),
           ],
         ),
@@ -173,11 +133,13 @@ class HelpScreen extends StatelessWidget {
     IconData icon,
     Color color,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       width: 160,
       margin: EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -215,6 +177,7 @@ class HelpScreen extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ],
@@ -230,10 +193,12 @@ class HelpScreen extends StatelessWidget {
     String question,
     String answer,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Color(0xFF2C2C2C) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -249,68 +214,23 @@ class HelpScreen extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
+            color: isDark ? Colors.white : Colors.black87,
           ),
         ),
+        collapsedIconColor: isDark ? Colors.white70 : Colors.grey[700],
+        iconColor: Theme.of(context).primaryColor,
         children: [
           Padding(
             padding: EdgeInsets.all(16),
             child: Text(
               answer,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: isDark ? Colors.white70 : Colors.grey[600],
                 fontSize: 14,
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildContactOption(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        leading: Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-        title: Text(title),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            color: Colors.grey[600],
-          ),
-        ),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: Colors.grey[400],
-        ),
-        onTap: onTap,
       ),
     );
   }

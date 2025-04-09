@@ -180,7 +180,7 @@ class _TransitionScreenState extends State<TransitionScreen> with SingleTickerPr
                         child: Column(
                           children: [
                             Text(
-                              'Smart Home',
+                              'Chakra',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,

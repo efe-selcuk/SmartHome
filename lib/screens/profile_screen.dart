@@ -22,11 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   bool _isLoading = false;
   bool _isSaving = false;
-  Map<String, bool> notificationPreferences = {
-    'pushNotifications': true,
-    'emailNotifications': true,
-    'activityAlerts': true,
-  };
 
   @override
   void initState() {
@@ -60,16 +55,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _firstNameController.text = userData['firstName'] ?? '';
           _lastNameController.text = userData['lastName'] ?? '';
-          
-          // Bildirim tercihlerini yükle
-          if (userData.containsKey('notificationPreferences')) {
-            Map<String, dynamic> prefs = userData['notificationPreferences'];
-            notificationPreferences = {
-              'pushNotifications': prefs['pushNotifications'] ?? true,
-              'emailNotifications': prefs['emailNotifications'] ?? true,
-              'activityAlerts': prefs['activityAlerts'] ?? true,
-            };
-          }
         });
       }
     } catch (e) {
@@ -99,7 +84,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'lastName': _lastNameController.text,
         'email': user?.email ?? '',
         'updatedAt': FieldValue.serverTimestamp(),
-        'notificationPreferences': notificationPreferences,
       };
       
       bool success = await _databaseService.updateUserProfile(userData);
@@ -199,193 +183,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       _showSnackBar('Hata: $e');
     }
-  }
-  
-  // Bildirim tercihlerini göster
-  void _showNotificationPreferences() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        // Geçici değişiklikler için local tercihler
-        Map<String, bool> tempPrefs = Map.from(notificationPreferences);
-        
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Bildirim Tercihleri'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildSwitchTile(
-                    'Push Bildirimleri',
-                    'Anlık bildirimler al',
-                    tempPrefs['pushNotifications'] ?? true,
-                    (value) {
-                      setState(() {
-                        tempPrefs['pushNotifications'] = value;
-                      });
-                    },
-                  ),
-                  _buildSwitchTile(
-                    'E-posta Bildirimleri',
-                    'Güncellemeler için e-posta al',
-                    tempPrefs['emailNotifications'] ?? true,
-                    (value) {
-                      setState(() {
-                        tempPrefs['emailNotifications'] = value;
-                      });
-                    },
-                  ),
-                  _buildSwitchTile(
-                    'Aktivite Uyarıları',
-                    'Evdeki hareketlerde uyarı al',
-                    tempPrefs['activityAlerts'] ?? true,
-                    (value) {
-                      setState(() {
-                        tempPrefs['activityAlerts'] = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('İptal'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await _updateNotificationPreferences(tempPrefs);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                  ),
-                  child: Text('Kaydet'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-  
-  // Bildirim tercihlerini güncelleyen fonksiyon
-  Future<void> _updateNotificationPreferences(Map<String, bool> prefs) async {
-    try {
-      bool success = await _databaseService.updateNotificationPreferences(prefs);
-      
-      if (success) {
-        setState(() {
-          notificationPreferences = prefs;
-        });
-        _showSnackBar('Bildirim tercihleri güncellendi');
-      } else {
-        _showSnackBar('Bildirim tercihleri güncellenirken hata oluştu');
-      }
-    } catch (e) {
-      _showSnackBar('Hata: $e');
-    }
-  }
-  
-  // Gizlilik ayarlarını göster
-  void _showPrivacySettings() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Gizlilik Ayarları'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text('Veri Kullanımı'),
-                subtitle: Text('Uygulamanın verilerinizi nasıl kullandığını görüntüleyin'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Veri kullanım sayfasına yönlendir
-                },
-              ),
-              ListTile(
-                title: Text('Hesabı Sil'),
-                subtitle: Text('Hesabınızı ve tüm verilerinizi kalıcı olarak silin'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showDeleteAccountConfirmation();
-                },
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-              ),
-              child: Text('Kapat'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-  
-  // Hesap silme onayı
-  void _showDeleteAccountConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Hesabı Sil'),
-          content: Text(
-            'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz silinecektir.',
-            style: TextStyle(fontSize: 14),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('İptal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // Hesabı silme işlemini burada yapabilirsiniz
-                _showSnackBar('Bu özellik şu anda aktif değil.');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: Text('Hesabı Sil'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-  
-  // Switch düğmesi ile bir ayar satırı oluştur
-  Widget _buildSwitchTile(
-    String title, 
-    String subtitle, 
-    bool value, 
-    Function(bool) onChanged
-  ) {
-    return ListTile(
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: Theme.of(context).primaryColor,
-      ),
-    );
   }
   
   // Snackbar mesajı göster
@@ -494,18 +291,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'Şifre Değiştir',
                     Icons.lock_outline,
                     _showChangePasswordDialog,
-                  ),
-                  SizedBox(height: 12),
-                  _buildSettingCard(
-                    'Bildirim Tercihleri',
-                    Icons.notifications_none,
-                    _showNotificationPreferences,
-                  ),
-                  SizedBox(height: 12),
-                  _buildSettingCard(
-                    'Gizlilik Ayarları',
-                    Icons.privacy_tip_outlined,
-                    _showPrivacySettings,
                   ),
                   SizedBox(height: 32),
 

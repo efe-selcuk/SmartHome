@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   SizedBox(height: 24),
                   Text(
-                    'Smart Home',
+                    'Chakra',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 32,
@@ -205,46 +205,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Giriş Yap',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
-                  ),
-                  SizedBox(height: 24),
-                  
-                  // Sosyal medya girişi
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(height: 1, width: 80, color: Colors.grey[300]),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'veya',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                        ),
-                      ),
-                      Container(height: 1, width: 80, color: Colors.grey[300]),
-                    ],
-                  ),
-                  SizedBox(height: 24),
-                  
-                  // Sosyal medya butonları
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildSocialButton(
-                        icon: FontAwesomeIcons.google,
-                        color: Colors.red,
-                        onTap: () {
-                          // Google login işlevi
-                        },
-                      ),
-                      SizedBox(width: 20),
-                      _buildSocialButton(
-                        icon: FontAwesomeIcons.facebook,
-                        color: Colors.blue[800]!,
-                        onTap: () {
-                          // Facebook login işlevi
-                        },
-                      ),
-                    ],
                   ),
                   SizedBox(height: 24),
                   

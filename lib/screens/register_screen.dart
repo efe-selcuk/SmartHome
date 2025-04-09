@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore'u ekleyin
-import 'package:smarthome/screens/home_screen.dart';  // Giriş sonrası yönlendirilecek ekran
+import 'package:smarthome/screens/transition_screen.dart';  // Transition screen'i import ediyoruz
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -42,10 +42,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'createdAt': Timestamp.now(), // Kaydın oluşturulma tarihi
         });
 
-        // Başarılı bir şekilde kayıt olduktan sonra anasayfaya yönlendirme ve önceki ekranları temizleme
+        // Başarılı bir şekilde kayıt olduktan sonra transition ekranına yönlendirme ve önceki ekranları temizleme
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
+          MaterialPageRoute(builder: (context) => TransitionScreen()),
               (Route<dynamic> route) => false, // Bu satır önceki tüm ekranları temizler
         );
       }
@@ -118,7 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   Text(
-                    'Smart Home\'a hoş geldiniz',
+                    'Chakra\'ya hoş geldiniz',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,

@@ -258,6 +258,54 @@ class SensorService {
     }
   }
 
+  // AC fan hızını ayarla (low, medium, high, auto)
+  static Future<bool> setACFanSpeed(String fanSpeed) async {
+    // Geçerli fan hızı değerlerini kontrol et
+    if (!['low', 'medium', 'high', 'auto'].contains(fanSpeed)) {
+      print('Geçersiz fan hızı: $fanSpeed');
+      return false;
+    }
+
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/ac?fan=$fanSpeed'));
+
+      if (response.statusCode == 200) {
+        print('AC fan hızı $fanSpeed olarak ayarlandı');
+        return true;
+      } else {
+        print('AC fan hızı ayarlanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('AC fan hızı ayarlanırken hata: $e');
+      return false;
+    }
+  }
+
+  // AC modunu ayarla (cool, heat, dry, fan, auto)
+  static Future<bool> setACMode(String mode) async {
+    // Geçerli mod değerlerini kontrol et
+    if (!['cool', 'heat', 'dry', 'fan', 'auto'].contains(mode)) {
+      print('Geçersiz AC modu: $mode');
+      return false;
+    }
+
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/ac?mode=$mode'));
+
+      if (response.statusCode == 200) {
+        print('AC modu $mode olarak ayarlandı');
+        return true;
+      } else {
+        print('AC modu ayarlanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('AC modu ayarlanırken hata: $e');
+      return false;
+    }
+  }
+
   // Oda ışık rengini ayarlama
   static Future<void> controlLightColor(int room, int colorValue) async {
     final endpoint = '/room$room/light/color';
@@ -653,3 +701,4 @@ class SensorService {
     }
   }
 }
+
