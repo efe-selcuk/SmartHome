@@ -5,7 +5,7 @@ import 'package:smarthome/screens/automation_screen.dart'; // AutomationRule sı
 
 class SensorService {
   // Son uygulanan otomasyon işlemlerini izleme
-  static Map<String, int> _lastAppliedRules = {};
+  static final Map<String, int> _lastAppliedRules = {};
 
   // Otomasyon kurallarını uygulama metodu
   static Future<bool> applyAutomationRule(

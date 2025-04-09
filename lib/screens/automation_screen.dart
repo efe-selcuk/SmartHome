@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/services/database_service.dart';
 
 class AutomationScreen extends StatefulWidget {

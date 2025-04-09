@@ -6,7 +6,6 @@ import 'package:smarthome/screens/room_detail_screen.dart';
 import 'package:smarthome/screens/login_screen.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/screens/security_screen.dart'; // Import the security screen
-import 'package:smarthome/screens/control_panel_screen.dart';
 import 'package:smarthome/screens/profile_screen.dart';
 import 'package:smarthome/screens/notifications_screen.dart';
 import 'package:smarthome/screens/settings_screen.dart';
@@ -144,8 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Konum verisini al
     try {
       LocationData locationData = await location.getLocation();
-      print(
-          'Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
+      print('Kullanıcı Konumu: ${locationData.latitude}, ${locationData.longitude}');
       getWeatherData(locationData.latitude!, locationData.longitude!);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -159,8 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Konum izni dialog penceresi
-  void _showLocationDialog(
-      String title, String message, String buttonText, VoidCallback onPressed) {
+  void _showLocationDialog(String title, String message, String buttonText, VoidCallback onPressed) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -220,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> getWeatherData(double latitude, double longitude) async {
     try {
       final weatherData = await _weatherService.getWeather(latitude, longitude);
-
+      
       setState(() {
         temperature = weatherData['temperature'];
         weatherDescription = weatherData['weatherDescription'];
@@ -237,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
         windSpeed = '--';
         weatherIcon = '';
       });
-
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Hava durumu bilgisi alınamadı: ${e.toString()}'),
@@ -276,9 +273,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void navigateTo(String routeName) {
     Widget screen;
     switch (routeName) {
-      case 'Kontrol Paneli':
-        screen = ControlPanelScreen();
-        break;
       case 'Profil':
         screen = ProfileScreen();
         break;
@@ -290,6 +284,9 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       case 'Yardım':
         screen = HelpScreen();
+        break;
+      case 'Otomasyon':
+        screen = AutomationScreen();
         break;
       default:
         screen = Scaffold(
@@ -330,10 +327,9 @@ class _HomeScreenState extends State<HomeScreen> {
             flexibleSpace: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 // Calculate the app bar's current height to adjust content
-                final expandRatio = (constraints.maxHeight - kToolbarHeight) /
-                    (150.0 - kToolbarHeight);
+                final expandRatio = (constraints.maxHeight - kToolbarHeight) / (150.0 - kToolbarHeight);
                 final isCollapsed = expandRatio < 0.3;
-
+                
                 return FlexibleSpaceBar(
                   titlePadding: EdgeInsets.only(left: 20, bottom: 16),
                   centerTitle: false,
@@ -400,37 +396,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.2),
+                                            color: Colors.black.withOpacity(0.2),
                                             blurRadius: 8,
                                             offset: Offset(0, 3),
                                           ),
                                         ],
                                       ),
                                       child: GestureDetector(
-                                        onTap:
-                                            _showProfilePictureSelectionDialog,
+                                        onTap: _showProfilePictureSelectionDialog,
                                         child: CircleAvatar(
                                           radius: 20,
-                                          backgroundColor:
-                                              Colors.white.withOpacity(0.2),
-                                          backgroundImage:
-                                              AssetImage(profilePicture),
+                                          backgroundColor: Colors.white.withOpacity(0.2),
+                                          backgroundImage: AssetImage(profilePicture),
                                         ),
                                       ),
                                     ),
                                     SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
                                             'Hoş geldin 👋',
                                             style: TextStyle(
-                                              color:
-                                                  Colors.white.withOpacity(0.9),
+                                              color: Colors.white.withOpacity(0.9),
                                               fontSize: 14,
                                               fontWeight: FontWeight.w500,
                                             ),
@@ -501,11 +491,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Ana Göstergeler - Daha dolu bir görünüm için yeni bir widget ekliyoruz
                   _buildMainStats(),
                   SizedBox(height: 16),
-
+                  
                   // Hava Durumu Kartı
                   _buildWeatherCard(),
                   SizedBox(height: 16),
-
+                  
                   // Odalar Başlığı ve Ekleme Butonu
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -520,17 +510,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 end: Alignment.bottomRight,
                                 colors: [
                                   Theme.of(context).primaryColor,
-                                  Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.8),
+                                  Theme.of(context).primaryColor.withOpacity(0.8),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Theme.of(context)
-                                      .primaryColor
-                                      .withOpacity(0.3),
+                                  color: Theme.of(context).primaryColor.withOpacity(0.3),
                                   blurRadius: 10,
                                   offset: Offset(0, 4),
                                 ),
@@ -558,12 +544,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () => _showAddRoomDialog(),
                         style: ElevatedButton.styleFrom(
                           elevation: 4,
-                          shadowColor:
-                              Theme.of(context).primaryColor.withOpacity(0.4),
+                          shadowColor: Theme.of(context).primaryColor.withOpacity(0.4),
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -587,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   SizedBox(height: 12),
-
+                  
                   // Odalar Listesi
                   rooms.isEmpty
                       ? Center(
@@ -643,12 +627,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ElevatedButton(
                                   onPressed: () => _showAddRoomDialog(),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Theme.of(context).primaryColor,
+                                    backgroundColor: Theme.of(context).primaryColor,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 30, vertical: 15),
+                                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -668,8 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       : GridView.builder(
                           shrinkWrap: true,
                           physics: NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
@@ -801,8 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Container(
                           padding: EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
@@ -837,14 +817,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           future: _databaseService.loadRoomData(roomName),
                           builder: (context, snapshot) {
                             int deviceCount = 0;
-
+                            
                             if (snapshot.hasData && snapshot.data != null) {
                               // Cihaz sayısını belirleme
-                              final devices =
-                                  snapshot.data!['devices'] as List<dynamic>?;
+                              final devices = snapshot.data!['devices'] as List<dynamic>?;
                               deviceCount = devices?.length ?? 0;
                             }
-
+                            
                             return Text(
                               '$deviceCount Cihaz',
                               style: TextStyle(
@@ -868,15 +847,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            RoomDetailsScreen(roomName: roomName),
+                        builder: (context) => RoomDetailsScreen(roomName: roomName),
                       ),
                     );
                   },
                   onLongPress: () => _showDeleteConfirmation(roomName),
                   splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  highlightColor:
-                      Theme.of(context).primaryColor.withOpacity(0.05),
+                  highlightColor: Theme.of(context).primaryColor.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(24),
                 ),
               ),
@@ -894,29 +871,28 @@ class _HomeScreenState extends State<HomeScreen> {
         return InkWell(
           borderRadius: BorderRadius.circular(30),
           onTap: () async {
-            // Klima durum değişikliği için
-            Map<String, dynamic>? roomData =
-                await _databaseService.loadRoomData(roomName);
+            // Klima durum değişikliği için 
+            Map<String, dynamic>? roomData = await _databaseService.loadRoomData(roomName);
             if (roomData != null) {
               bool isClimaOn = roomData['isClimaOn'] ?? false;
-
+              
               // API ile klimayı aç/kapa
               bool success = await SensorService.setACStatus(!isClimaOn);
-
+              
               if (success) {
                 // Firestore'da durumu güncelle
                 roomData['isClimaOn'] = !isClimaOn;
-
+                
                 // Klima sıcaklığı yoksa varsayılan değer ayarla
                 if (!roomData.containsKey('climaTemp')) {
                   roomData['climaTemp'] = 22.0;
                 }
-
+                
                 // Değişiklik zaman damgası ekle
                 roomData['lastUpdated'] = DateTime.now().millisecondsSinceEpoch;
-
+                
                 await _databaseService.saveRoomData(roomName, roomData);
-                setState(() {}); // StatefulBuilder'daki state'i güncelle
+                setState(() {});  // StatefulBuilder'daki state'i güncelle
               }
             }
           },
@@ -924,17 +900,17 @@ class _HomeScreenState extends State<HomeScreen> {
             future: _databaseService.loadRoomData(roomName),
             builder: (context, snapshot) {
               bool isClimaOn = false;
-
+              
               if (snapshot.hasData && snapshot.data != null) {
                 isClimaOn = snapshot.data!['isClimaOn'] ?? false;
               }
-
+              
               return AnimatedContainer(
                 duration: Duration(milliseconds: 300),
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isClimaOn
-                      ? Colors.blue.withOpacity(0.15)
+                  color: isClimaOn 
+                      ? Colors.blue.withOpacity(0.15) 
                       : Colors.grey.withOpacity(0.1),
                   shape: BoxShape.circle,
                   boxShadow: isClimaOn
@@ -947,8 +923,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ]
                       : [],
                   border: Border.all(
-                    color: isClimaOn
-                        ? Colors.blue.withOpacity(0.5)
+                    color: isClimaOn 
+                        ? Colors.blue.withOpacity(0.5) 
                         : Colors.transparent,
                     width: 2,
                   ),
@@ -1021,8 +997,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: _showProfilePictureSelectionDialog,
                           child: CircleAvatar(
                             radius: 30,
-                            backgroundColor:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
+                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
                             backgroundImage: AssetImage(profilePicture),
                           ),
                         ),
@@ -1033,22 +1008,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                '$firstName $lastName',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                  Text(
+                    '$firstName $lastName',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                               SizedBox(height: 4),
-                              Text(
-                                user != null
-                                    ? user!.email ?? 'E-posta bulunamadı'
-                                    : 'E-posta bulunamadı',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
+                  Text(
+                                user != null ? user!.email ?? 'E-posta bulunamadı' : 'E-posta bulunamadı',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -1091,15 +1064,13 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildDrawerSection(
               'Ana Özellikler',
               [
-                _buildDrawerItem(Icons.dashboard_rounded, 'Kontrol Paneli',
-                    () => navigateTo('Kontrol Paneli')),
                 _buildDrawerItem(Icons.security, 'Güvenlik', () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => SecurityScreen()),
                   );
                 }),
-                _buildDrawerItem(Icons.auto_awesome, 'Otomasyon', () {
+                _buildDrawerItem(Icons.smart_toy, 'Otomasyon', () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => AutomationScreen()),
@@ -1111,14 +1082,10 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildDrawerSection(
               'Ayarlar',
               [
-                _buildDrawerItem(
-                    Icons.person, 'Profil', () => navigateTo('Profil')),
-                _buildDrawerItem(Icons.notifications, 'Bildirimler',
-                    () => navigateTo('Bildirimler')),
-                _buildDrawerItem(
-                    Icons.settings, 'Ayarlar', () => navigateTo('Ayarlar')),
-                _buildDrawerItem(
-                    Icons.help_outline, 'Yardım', () => navigateTo('Yardım')),
+                _buildDrawerItem(Icons.person, 'Profil', () => navigateTo('Profil')),
+                _buildDrawerItem(Icons.notifications, 'Bildirimler', () => navigateTo('Bildirimler')),
+                _buildDrawerItem(Icons.settings, 'Ayarlar', () => navigateTo('Ayarlar')),
+                _buildDrawerItem(Icons.help_outline, 'Yardım', () => navigateTo('Yardım')),
               ],
             ),
             Divider(height: 0),
@@ -1146,8 +1113,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDrawerSection(String title, List<Widget> items) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(
@@ -1169,7 +1136,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ListTile(
       leading: Container(
         padding: EdgeInsets.all(8),
-        decoration: BoxDecoration(
+              decoration: BoxDecoration(
           color: Theme.of(context).primaryColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -1179,7 +1146,7 @@ class _HomeScreenState extends State<HomeScreen> {
           size: 20,
         ),
       ),
-      title: Text(
+                    title: Text(
         title,
         style: TextStyle(
           fontSize: 16,
@@ -1240,8 +1207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                Theme.of(context).primaryColor.withOpacity(0.3),
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
                             blurRadius: 12,
                             offset: Offset(0, 5),
                           )
@@ -1376,9 +1342,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showDeleteConfirmation(String roomName) {
-    showDialog(
-      context: context,
-      builder: (context) {
+          showDialog(
+            context: context,
+            builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -1425,7 +1391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    TextButton(
+                  TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Vazgeç',
@@ -1437,15 +1403,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () {
+                    onPressed: () {
                         deleteRoom(roomName);
-                        Navigator.pop(context);
-                      },
+                      Navigator.pop(context);
+                    },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1475,30 +1440,25 @@ class _HomeScreenState extends State<HomeScreen> {
       'Clear': [Color(0xFF3399fe), Color(0xFF66c6ff)], // Açık - Mavi tonları
       'Clouds': [Color(0xFF6c7689), Color(0xFF8c96a8)], // Bulutlu - Gri tonları
       'Rain': [Color(0xFF4B6CB7), Color(0xFF182848)], // Yağmurlu - Koyu mavi
-      'Thunderstorm': [
-        Color(0xFF283E51),
-        Color(0xFF4B79A1)
-      ], // Fırtınalı - Koyu lacivert
+      'Thunderstorm': [Color(0xFF283E51), Color(0xFF4B79A1)], // Fırtınalı - Koyu lacivert
       'Snow': [Color(0xFF8e9eab), Color(0xFFeef2f3)], // Karlı - Gri-beyaz
       'Mist': [Color(0xFF757F9A), Color(0xFFD7DDE8)], // Sisli - Gri-bej
       'default': [Color(0xFF3399fe), Color(0xFF66c6ff)], // Varsayılan
     };
-
+    
     // Hava durumuna göre gradient seçimi
     List<Color> gradientColors = weatherGradients['default']!;
-
+    
     // Mevcut hava durumuna göre gradient belirle
     if (weatherDescription.isNotEmpty) {
       for (String condition in weatherGradients.keys) {
-        if (weatherDescription
-            .toLowerCase()
-            .contains(condition.toLowerCase())) {
+        if (weatherDescription.toLowerCase().contains(condition.toLowerCase())) {
           gradientColors = weatherGradients[condition]!;
           break;
         }
       }
     }
-
+    
     // Hava durumuna göre arka plan ikonları
     IconData weatherBgIcon = Icons.wb_sunny;
     if (weatherDescription.toLowerCase().contains('cloud')) {
@@ -1509,11 +1469,11 @@ class _HomeScreenState extends State<HomeScreen> {
       weatherBgIcon = Icons.flash_on;
     } else if (weatherDescription.toLowerCase().contains('snow')) {
       weatherBgIcon = Icons.ac_unit;
-    } else if (weatherDescription.toLowerCase().contains('mist') ||
-        weatherDescription.toLowerCase().contains('fog')) {
+    } else if (weatherDescription.toLowerCase().contains('mist') || 
+               weatherDescription.toLowerCase().contains('fog')) {
       weatherBgIcon = Icons.water;
     }
-
+    
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -1580,21 +1540,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: weatherIcon.isNotEmpty
-                        ? Image.network(
-                            'https://openweathermap.org/img/w/$weatherIcon.png',
-                            width: 35,
-                            height: 35,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              weatherBgIcon,
-                              size: 26,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(
+                      ? Image.network(
+                          'https://openweathermap.org/img/w/$weatherIcon.png',
+                          width: 35,
+                          height: 35,
+                          errorBuilder: (context, error, stackTrace) => Icon(
                             weatherBgIcon,
                             size: 26,
                             color: Colors.white,
                           ),
+                        )
+                      : Icon(
+                          weatherBgIcon,
+                          size: 26,
+                          color: Colors.white,
+                        ),
                   ),
                   SizedBox(width: 12),
                   // Sıcaklık ve açıklama
@@ -1680,47 +1640,44 @@ class _HomeScreenState extends State<HomeScreen> {
   // Ana istatistikler widget'ı
   Widget _buildMainStats() {
     return FutureBuilder<Map<String, double>>(
-        future: SensorService.fetchSensorData(),
-        builder: (context, snapshot) {
-          // Varsayılan değerler (veri yüklenirken veya hata durumunda)
-          String tempValue = '--°C';
-          String humidityValue = '--\%';
-
-          // Eğer veri başarıyla alındıysa gerçek değerleri kullan
-          if (snapshot.hasData && snapshot.data != null) {
-            tempValue =
-                '${snapshot.data!['temperature']?.toStringAsFixed(1) ?? '--'}°C';
-            humidityValue =
-                '${snapshot.data!['humidity']?.toStringAsFixed(0) ?? '--'}%';
-          }
-
-          return Container(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: Offset(0, 5),
-                )
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem(
-                    Icons.thermostat, 'Sıcaklık', tempValue, Colors.orange),
-                _buildVerticalDivider(),
-                _buildStatItem(
-                    Icons.water_drop, 'Nem', humidityValue, Colors.blue),
-                _buildVerticalDivider(),
-                _buildStatItem(Icons.shield, 'Güvenlik', 'Aktif', Colors.green),
-              ],
-            ),
-          );
-        });
+      future: SensorService.fetchSensorData(),
+      builder: (context, snapshot) {
+        // Varsayılan değerler (veri yüklenirken veya hata durumunda)
+        String tempValue = '--°C';
+        String humidityValue = '--%';
+        
+        // Eğer veri başarıyla alındıysa gerçek değerleri kullan
+        if (snapshot.hasData && snapshot.data != null) {
+          tempValue = '${snapshot.data!['temperature']?.toStringAsFixed(1) ?? '--'}°C';
+          humidityValue = '${snapshot.data!['humidity']?.toStringAsFixed(0) ?? '--'}%';
+        }
+        
+        return Container(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: Offset(0, 5),
+              )
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(Icons.thermostat, 'Sıcaklık', tempValue, Colors.orange),
+              _buildVerticalDivider(),
+              _buildStatItem(Icons.water_drop, 'Nem', humidityValue, Colors.blue),
+              _buildVerticalDivider(),
+              _buildStatItem(Icons.shield, 'Güvenlik', 'Aktif', Colors.green),
+            ],
+          ),
+        );
+      }
+    );
   }
 
   Widget _buildVerticalDivider() {
@@ -1731,8 +1688,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatItem(
-      IconData icon, String label, String value, Color color) {
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
         Container(
@@ -1818,8 +1774,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                Theme.of(context).primaryColor.withOpacity(0.3),
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
                             blurRadius: 12,
                             offset: Offset(0, 5),
                           )
@@ -1963,64 +1918,65 @@ class ArtisticPatternPainter extends CustomPainter {
       ..color = Colors.white.withOpacity(0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
-
+    
     // Desenler için rastgele değerler
     final random = math.Random(42); // Sabit seed ile rastgele değerler
-
+    
     // Desenli arka plan
     for (int i = 0; i < 8; i++) {
       // Yatay çizgiler
       double y = size.height * (0.2 + 0.1 * i);
       double amplitude = 15 + random.nextDouble() * 10;
       double frequency = 0.02 + random.nextDouble() * 0.04;
-
+      
       Path wavePath = Path();
       wavePath.moveTo(0, y);
-
+      
       for (double x = 0; x <= size.width; x += 5) {
         double dy = math.sin(x * frequency) * amplitude;
         wavePath.lineTo(x, y + dy);
       }
-
+      
       canvas.drawPath(wavePath, paint);
     }
-
+    
     // Dikey çizgiler
     for (int i = 0; i < 6; i++) {
       double x = size.width * (0.1 + 0.2 * i);
-
+      
       Path path = Path();
       path.moveTo(x, 0);
       path.lineTo(x, size.height * 0.5);
-
+      
       canvas.drawPath(path, paint);
     }
-
+    
     // Daireler
     for (int i = 0; i < 8; i++) {
       double x = random.nextDouble() * size.width;
       double y = random.nextDouble() * size.height * 0.6;
       double radius = 10 + random.nextDouble() * 40;
-
+      
       canvas.drawCircle(
-          Offset(x, y),
-          radius,
-          Paint()
-            ..color = Colors.white.withOpacity(0.04)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.8);
+        Offset(x, y), 
+        radius, 
+        Paint()
+          ..color = Colors.white.withOpacity(0.04)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8
+      );
     }
-
+    
     // Noktalar
     final dotPaint = Paint()
       ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.fill;
-
+      
     for (int i = 0; i < 30; i++) {
       double x = random.nextDouble() * size.width;
       double y = random.nextDouble() * size.height * 0.7;
       double radius = 1 + random.nextDouble() * 2;
-
+      
       canvas.drawCircle(Offset(x, y), radius, dotPaint);
     }
   }

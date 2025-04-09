@@ -3,8 +3,8 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:smarthome/services/sensor_service.dart';
 import 'package:smarthome/services/database_service.dart';
 import 'package:smarthome/screens/ac_detail_screen.dart';
-import 'package:smarthome/screens/automation_screen.dart';
-import 'package:smarthome/screens/tv_remote_screen.dart'; // TV Remote Screen import edildi
+import 'package:smarthome/screens/tv_remote_screen.dart';
+import 'package:smarthome/screens/automation_screen.dart';  // AutomationRule için gerekli import
 import 'dart:async';
 
 class RoomDetailsScreen extends StatefulWidget {
@@ -21,8 +21,8 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool isClimaOn = false;
   bool isLightOn = false; // Işık durumu sadece switch ile kontrol edilecek
   bool isTvOn = false;
-  bool _isDisposed = false; // Eklenen değişken
-  bool isIRLedOn = false; // IR LED durumu
+  bool _isDisposed = false;  // Eklenen değişken
+  bool isIRLedOn = false;    // IR LED durumu
   double? temperature;
   double? humidity;
   double lightIntensity = 50.0;
@@ -33,6 +33,18 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   final DatabaseService _databaseService = DatabaseService();
   Timer? _timer;
+
+  // Otomasyon durumunu izlemek için değişken
+  bool _isAutomationRuleApplied = false;
+  int _lastAutomationAppliedTime = 0;
+  
+  // Oda başına otomasyon uygulanıp uygulanmadığını takip eden statik değişken
+  static final Map<String, int> _lastAutomationTimesPerRoom = {};
+
+  // Odaya giriş zamanını takip eden değişken
+  int _roomEntryTime = 0;
+  // Oturum boyunca otomasyon uygulanıp uygulanmadığını takip eden flag
+  bool _automationAppliedInThisSession = false;
 
   // Cihazları eklemek için
   void addDevice(String deviceName) {
@@ -53,11 +65,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       'climaTemp': climaTemperature,
       'lightIntensity': lightIntensity,
       'isClimaOn': isClimaOn,
-      'isLightOn': isLightOn, // Işık durumu, switch'e bağlı olarak
+      'isLightOn': isLightOn,  // Işık durumu, switch'e bağlı olarak
       'isTvOn': isTvOn,
       'temperature': temperature,
       'humidity': humidity,
-      'isIRLedOn': isIRLedOn, // IR LED durumu eklendi
+      'isIRLedOn': isIRLedOn,  // IR LED durumu eklendi
       'irLedColor': irLedColor, // IR LED rengi eklendi
       'irLedEffect': irLedEffect, // IR LED efekti eklendi
     };
@@ -67,10 +79,104 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   // Sıcaklık ve nem verilerini çekme
   Future<void> fetchSensorData() async {
     Map<String, double> data = await SensorService.fetchSensorData();
-    setState(() {
-      temperature = data['temperature'];
-      humidity = data['humidity'];
-    });
+    if (!_isDisposed && mounted) {
+      setState(() {
+        temperature = data['temperature'];
+        humidity = data['humidity'];
+      });
+      
+      // Otomasyon kontrolünü her zaman yap, 10 saniye sınırlamasını kaldır
+      // Otomasyon kontrolü zaten kendi içinde gereksiz tekrar çalışmayı engelleyecek
+      if (!_automationAppliedInThisSession) {
+        print('Otomasyon kontrolü başlatılıyor...');
+        _checkAndApplyAutomationRules(data);
+      } else {
+        print('Bu oturumda otomasyon zaten uygulandı, yeniden kontrol edilmiyor.');
+      }
+    }
+  }
+  
+  // Otomasyon kurallarını kontrol et ve uygula
+  Future<void> _checkAndApplyAutomationRules(Map<String, double> sensorData) async {
+    // Bu oturumda daha önce otomasyon uygulanmışsa tekrar uygulama
+    if (_automationAppliedInThisSession) {
+      print('Bu oturumda zaten otomasyon uygulandı, tekrar uygulanmıyor');
+      return;
+    }
+    
+    // Global oda başına kontrol - son uygulamadan bu yana 5 dakika geçmediyse tekrar uygulama
+    int currentTime = DateTime.now().millisecondsSinceEpoch;
+    int lastTimeForRoom = _lastAutomationTimesPerRoom[widget.roomName] ?? 0;
+    
+    if (currentTime - lastTimeForRoom < 300000) {  // 300 saniye (5 dakika)
+      print('Son otomasyon uygulamasından beri 5 dakika geçmedi (${widget.roomName}), tekrar uygulanmıyor');
+      _automationAppliedInThisSession = true; // Bu oturumda işlem yapılmış gibi işaretle
+      return;
+    }
+    
+    try {
+      print('Otomasyon için sıcaklık/nem değerleri: ${sensorData['temperature']}°C, ${sensorData['humidity']}%');
+      
+      // Odanın otomasyon kurallarını yükle
+      Map<String, dynamic>? roomData = await _databaseService.loadRoomData(widget.roomName);
+      
+      if (roomData != null && roomData.containsKey('automationRule')) {
+        Map<String, dynamic> ruleData = roomData['automationRule'];
+        AutomationRule rule = AutomationRule.fromMap(ruleData);
+        
+        print('Otomasyon kuralı bulundu: ${rule.isEnabled ? "Etkin" : "Devre dışı"}, ' +
+              'Sıcaklık ${rule.isTemperatureAbove ? ">" : "<"} ${rule.temperatureThreshold}°C, ' +
+              'Hedef: ${rule.targetTemperature}°C');
+        
+        // Kural etkin değilse işlem yapma
+        if (!rule.isEnabled) {
+          print('Kural devre dışı, otomasyon uygulanmıyor');
+          _automationAppliedInThisSession = true; // İşlem yapılmış sayılır
+          return;
+        }
+        
+        // Eğer klima zaten açıksa ve doğru sıcaklıktaysa işlem yapma
+        if (isClimaOn && climaTemperature.round() == rule.targetTemperature) {
+          print('Klima zaten açık ve hedef sıcaklıkta (${rule.targetTemperature}°C), işlem atlandı.');
+          _automationAppliedInThisSession = true;
+          return;
+        }
+        
+        // Kuralı uygula
+        print('Otomasyon kuralı uygulanıyor...');
+        bool ruleApplied = await SensorService.applyAutomationRule(widget.roomName, rule, sensorData);
+        
+        if (ruleApplied) {
+          // Kuralın uygulandığını kaydet
+          _isAutomationRuleApplied = true;
+          _lastAutomationAppliedTime = currentTime;
+          // Odaya özgü son uygulama zamanını güncelle
+          _lastAutomationTimesPerRoom[widget.roomName] = currentTime;
+          _automationAppliedInThisSession = true;
+          
+          // Durumu güncelle
+          setState(() {
+            isClimaOn = true;
+            climaTemperature = rule.targetTemperature.toDouble();
+          });
+          
+          // Durumu veritabanına kaydet
+          await _saveRoomData();
+          
+          print('Otomasyon kuralı uygulandı ve UI güncellendi: ${widget.roomName} odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
+        } else {
+          print('Otomasyon kuralı uygulaması başarısız veya koşullar sağlanmadı');
+          // Uygulama başarısız olsa bile, bu oturumda işlem yapılmış sayılır
+          _automationAppliedInThisSession = true;
+        }
+      } else {
+        print('Bu oda için tanımlanmış otomasyon kuralı bulunamadı');
+      }
+    } catch (e) {
+      print('Otomasyon kuralı uygulanırken hata: $e');
+      // Hata durumunda bile, bu oturumda işlem yapılmış sayılır
+      _automationAppliedInThisSession = true;
+    }
   }
 
   // Renk Seçici Dialog
@@ -114,12 +220,30 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _isDisposed = false; // initState'de false olarak ayarla
+    _isDisposed = false;  // initState'de false olarak ayarla
+    _isAutomationRuleApplied = false;  // Otomasyon uygulanma durumunu sıfırla
+    _lastAutomationAppliedTime = 0;  // Son uygulama zamanını sıfırla
+    _roomEntryTime = DateTime.now().millisecondsSinceEpoch;  // Odaya giriş zamanını kaydet
+    _automationAppliedInThisSession = false;  // Oturum otomasyon durumunu sıfırla
     _loadRoomData();
     // Periyodik veri güncellemeleri başlatılıyor
     _startPeriodicUpdates();
-    _startACStatusUpdates(); // AC durumunu güncelleme
     _checkIRLedStatus(); // IR LED durumunu kontrol et
+    
+    // Otomasyonun ilk kontrolü için kısa bir gecikme ekleyelim
+    Future.delayed(Duration(seconds: 2), () {
+      _resetAutomationSession();
+    });
+  }
+
+  // Otomasyon oturumunu sıfırla (test için gerektiğinde çağrılabilir)
+  void _resetAutomationSession() {
+    if (mounted) {
+      setState(() {
+        _automationAppliedInThisSession = false;
+      });
+      print('Otomasyon oturumu sıfırlandı, yeni kontrol yapılacak');
+    }
   }
 
   // IR LED durumunu kontrol et
@@ -136,7 +260,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   @override
   void dispose() {
-    _isDisposed = true; // dispose edildiğinde true yap
+    _isDisposed = true;  // dispose edildiğinde true yap
     // Periyodik güncellemeleri durduruyoruz
     _stopPeriodicUpdates();
     super.dispose();
@@ -144,85 +268,9 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   // Periyodik veri güncellemelerini başlat
   void _startPeriodicUpdates() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      fetchSensorData(); // 1 saniyede bir veriyi güncelle
-      _checkAutomationRules(); // Otomasyon kurallarını kontrol et
-    });
-  }
-
-  // Otomasyon kurallarını kontrol et ve uygula
-  Future<void> _checkAutomationRules() async {
-    try {
-      // Oda için otomasyon kurallarını yükle
-      final roomData = await _databaseService.loadRoomData(widget.roomName);
-      if (roomData != null && roomData.containsKey('automationRule')) {
-        Map<String, dynamic> ruleData = roomData['automationRule'];
-        final rule = AutomationRule.fromMap(ruleData);
-
-        // Sensör verilerini kullan - fetchSensorData() çağırmadan mevcut değerleri kullan
-        Map<String, double> sensorData = {
-          'temperature': temperature ?? 0.0,
-          'humidity': humidity ?? 0.0,
-        };
-
-        // Otomasyon kuralını uygula
-        bool ruleApplied = await SensorService.applyAutomationRule(
-            widget.roomName, rule, sensorData);
-
-        // Eğer otomasyon kuralı uygulandıysa (klima açıldıysa)
-        if (ruleApplied && mounted) {
-          // Yerel state'i güncelle
-          setState(() {
-            isClimaOn = true;
-            climaTemperature = rule.targetTemperature.toDouble();
-          });
-
-          // Veritabanını güncelle - sadece değişiklik varsa
-          if (!isClimaOn ||
-              climaTemperature != rule.targetTemperature.toDouble()) {
-            await _databaseService.saveRoomData(widget.roomName, {
-              'isClimaOn': true,
-              'climaTemp': rule.targetTemperature.toDouble(),
-              'lastUpdated': DateTime.now().millisecondsSinceEpoch,
-            });
-          }
-
-          print(
-              'Otomasyon kuralı uygulandı ve UI güncellendi: ${widget.roomName} odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
-        }
-      }
-    } catch (e) {
-      print('Otomasyon kuralları kontrol edilirken hata: $e');
-    }
-  }
-
-  // AC durumunu periyodik olarak güncelle
-  Timer? _acStatusTimer;
-  void _startACStatusUpdates() {
-    _acStatusTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
-      if (_isDisposed) {
-        timer.cancel();
-        return;
-      }
-
-      try {
-        Map<String, dynamic>? roomData =
-            await _databaseService.loadRoomData(widget.roomName);
-        if (roomData != null && mounted) {
-          bool newIsClimaOn = roomData['isClimaOn'] ?? false;
-          double newClimaTemp = roomData['climaTemp'] ?? 22.0;
-
-          // Sadece değişiklik varsa state'i güncelle
-          if (newIsClimaOn != isClimaOn || newClimaTemp != climaTemperature) {
-            setState(() {
-              isClimaOn = newIsClimaOn;
-              climaTemperature = newClimaTemp;
-            });
-          }
-        }
-      } catch (e) {
-        print('AC durumu güncellenirken hata: $e');
-      }
+    // Daha sık güncelleme için süreyi 5 saniyeye indirelim (isteğe bağlı ayarlayabilirsiniz)
+    _timer = Timer.periodic(Duration(seconds: 5), (timer) {
+      fetchSensorData();  // Sensorları kontrol et ve otomasyon kurallarını değerlendir
     });
   }
 
@@ -231,15 +279,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     if (_timer != null) {
       _timer!.cancel();
     }
-    if (_acStatusTimer != null) {
-      _acStatusTimer!.cancel();
-    }
   }
 
   // Firestore'dan odadaki verileri yükleme
   Future<void> _loadRoomData() async {
-    Map<String, dynamic>? roomData =
-        await _databaseService.loadRoomData(widget.roomName);
+    Map<String, dynamic>? roomData = await _databaseService.loadRoomData(widget.roomName);
 
     if (roomData != null) {
       setState(() {
@@ -248,19 +292,44 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         climaTemperature = roomData['climaTemp'];
         lightIntensity = roomData['lightIntensity'];
         isClimaOn = roomData['isClimaOn'];
-        isLightOn = roomData['isLightOn'] ??
-            false; // Işık durumu, eğer belirtilmediyse false
-        isTvOn = roomData['isTvOn'];
+        isLightOn = roomData['isLightOn'] ?? false;  // Işık durumu, eğer belirtilmediyse false
+        isTvOn = roomData['isTvOn'] ?? false;  // TV durumu
         temperature = roomData['temperature'];
         humidity = roomData['humidity'];
-
+        
         // IR LED verileri
         isIRLedOn = roomData['isIRLedOn'] ?? false;
         irLedColor = roomData['irLedColor'] ?? 'white';
         irLedEffect = roomData['irLedEffect'] ?? 'normal';
       });
+      
+      // Bir kereye mahsus oda açıldığında AC durumunu doğrudan kontrolle doğrula
+      _verifyACStatus();
     } else {
       print("Oda verisi bulunamadı.");
+    }
+  }
+  
+  // Sadece bir kez çağrılmak üzere, AC durumunu doğrulama
+  Future<void> _verifyACStatus() async {
+    try {
+      // Sadece başlangıçta cihazın gerçek durumunu kontrol et
+      Map<String, dynamic> acStatus = await SensorService.getACStatus();
+      bool deviceIsOn = acStatus['status'] == 'on';
+      int deviceTemp = acStatus['temperature'] ?? 22;
+      
+      // Eğer yerel durum ile cihaz durumu arasında uyumsuzluk varsa, yerel durumu güncelle
+      if (isClimaOn != deviceIsOn || climaTemperature.round() != deviceTemp) {
+        setState(() {
+          // Kullanıcı deneyimi açısından - varsayılan olarak önce yerel durumu kullanıyoruz
+          // isClimaOn = deviceIsOn;
+          // climaTemperature = deviceTemp.toDouble();
+        });
+        
+        print('AC durumu doğrulandı: Cihaz ${deviceIsOn ? "Açık" : "Kapalı"}, Sıcaklık: $deviceTemp°C');
+      }
+    } catch (e) {
+      print('AC durumu doğrulanırken hata: $e');
     }
   }
 
@@ -269,10 +338,10 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
     setState(() {
       isLightOn = isOn;
     });
-
+    
     // Odanın adına göre oda numarasını belirle
     int roomNumber;
-
+    
     switch (widget.roomName.toLowerCase()) {
       case 'salon':
         roomNumber = 1;
@@ -306,13 +375,11 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         }
         break;
     }
-
-    print(
-        'Oda: ${widget.roomName}, Oda Numarası: $roomNumber olarak belirlendi');
-
-    await SensorService.controlLight(roomNumber,
-        isOn); // Belirlenen oda numarasına göre ESP32'ye komut gönder
-    _saveRoomData(); // Veriyi kaydet
+    
+    print('Oda: ${widget.roomName}, Oda Numarası: $roomNumber olarak belirlendi');
+    
+    await SensorService.controlLight(roomNumber, isOn);  // Belirlenen oda numarasına göre ESP32'ye komut gönder
+    _saveRoomData();  // Veriyi kaydet
   }
 
   // IR LED açma/kapatma
@@ -381,14 +448,41 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   // Klima açma/kapatma
   Future<void> _controlAC(bool isOn) async {
     try {
+      // Önce UI'ı güncelle (daha iyi kullanıcı deneyimi için)
+      setState(() {
+        isClimaOn = isOn;
+      });
+      
+      // Sonra API'yi çağır
       bool success = await SensorService.setACStatus(isOn);
+      
       if (success) {
-        setState(() {
-          isClimaOn = isOn;
-        });
+        // Başarılı olursa veritabanını güncelle
         _saveRoomData();
+        print('Klima başarıyla ${isOn ? "açıldı" : "kapatıldı"}');
+      } else {
+        // Başarısız olursa UI'ı eski haline getir
+        setState(() {
+          isClimaOn = !isOn;
+        });
+        print('Klima ${isOn ? "açılamadı" : "kapatılamadı"}');
+        
+        // Kullanıcıya hata mesajı göster
+        if (!_isDisposed && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Klima kontrol edilemedi'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
+      // Hata durumunda UI'ı eski haline getir
+      setState(() {
+        isClimaOn = !isOn;
+      });
+      
       print('Klima kontrol edilirken hata: $e');
       // Hata durumunda kullanıcıya bilgi ver
       if (!_isDisposed && mounted) {
@@ -405,12 +499,31 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   // Klima sıcaklığını ayarlama
   Future<void> _setACTemperature(int temperature) async {
     try {
+      // Önce UI'ı güncelle (daha iyi kullanıcı deneyimi için)
+      setState(() {
+        climaTemperature = temperature.toDouble();
+      });
+      
+      // Sonra API'yi çağır
       bool success = await SensorService.setACTemperature(temperature);
+      
       if (success) {
-        setState(() {
-          climaTemperature = temperature.toDouble();
-        });
+        // Başarılı olursa veritabanını güncelle
         _saveRoomData();
+        print('Klima sıcaklığı başarıyla ${temperature}°C\'ye ayarlandı');
+      } else {
+        // Başarısız olursa UI durumunu koruyalım (bu durumu isteğe göre değiştirebilirsiniz)
+        print('Klima sıcaklığı ayarlanamadı');
+        
+        // Kullanıcıya hata mesajı göster
+        if (!_isDisposed && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Klima sıcaklığı ayarlanamadı'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Klima sıcaklığı ayarlanırken hata: $e');
@@ -525,7 +638,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                   ),
                 ),
                 SizedBox(height: 24),
-
+                
                 // Cihaz Listesi Başlığı ve Ekleme Butonu
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -549,14 +662,13 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: 16),
-
+                
                 // Cihaz Listesi
                 devices.isEmpty
                     ? Center(
@@ -796,70 +908,6 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                 ),
               ],
             ),
-            if (isLightOn) ...[
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Parlaklık',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            activeTrackColor: Theme.of(context).primaryColor,
-                            thumbColor: Theme.of(context).primaryColor,
-                            overlayColor:
-                                Theme.of(context).primaryColor.withOpacity(0.2),
-                          ),
-                          child: Slider(
-                            value: lightIntensity,
-                            min: 0.0,
-                            max: 100.0,
-                            onChanged: (value) {
-                              setState(() {
-                                lightIntensity = value;
-                              });
-                              _saveRoomData();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  GestureDetector(
-                    onTap: _showColorPicker,
-                    child: Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: lightColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: lightColor.withOpacity(0.3),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
@@ -920,7 +968,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                   Switch(
                     value: isClimaOn,
                     onChanged: (value) {
-                      _controlAC(value); // Yeni API ile kontrolü çağır
+                      _controlAC(value);
                     },
                     activeColor: Colors.blue,
                   ),
@@ -969,7 +1017,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
 
   Widget _buildTemperatureButton(int temp) {
     bool isSelected = climaTemperature.round() == temp;
-
+    
     return GestureDetector(
       onTap: () {
         _setACTemperature(temp);
@@ -1003,11 +1051,13 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
         borderRadius: BorderRadius.circular(15),
       ),
       child: ListTile(
-        contentPadding: EdgeInsets.all(16),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Icon(
-          Icons.devices_other,
+          deviceName == 'Akıllı TV' ? Icons.tv : Icons.devices_other,
           size: 28,
-          color: Theme.of(context).primaryColor,
+          color: deviceName == 'Akıllı TV' && isTvOn 
+              ? Theme.of(context).primaryColor 
+              : Theme.of(context).primaryColor.withOpacity(0.7),
         ),
         title: Text(
           deviceName,
@@ -1016,6 +1066,9 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        trailing: deviceName == 'Akıllı TV' 
+            ? Icon(Icons.arrow_forward_ios, size: 16)
+            : Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () {
           if (deviceName == 'Akıllı TV') {
             Navigator.push(
@@ -1041,150 +1094,341 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
-          gradient: isIRLedOn
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: _getGradientColors(),
-                )
-              : null,
-          color: isIRLedOn ? null : Colors.white,
-        ),
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            dividerColor: Colors.transparent,
-            unselectedWidgetColor: isIRLedOn ? Colors.white : Colors.grey,
-            colorScheme: ColorScheme.fromSwatch().copyWith(
-              secondary:
-                  isIRLedOn ? Colors.white : Theme.of(context).primaryColor,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: isIRLedOn 
+                ? _getLEDShadowColor()
+                : Colors.transparent,
+              blurRadius: 10,
+              spreadRadius: 1,
+              offset: Offset(0, 0),
             ),
-          ),
-          child: ExpansionTile(
-            title: Row(
-              children: [
-                Icon(
-                  Icons.wb_incandescent,
-                  color: isIRLedOn ? _getIconColor() : Colors.grey,
-                  size: 28,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              dividerColor: Colors.transparent,
+              colorScheme: ColorScheme.light(
+                primary: Theme.of(context).primaryColor,
+              ),
+              unselectedWidgetColor: Colors.grey[400],
+            ),
+            child: ExpansionTile(
+              onExpansionChanged: (expanded) {
+                // Sadece görsel efekt için
+              },
+              tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              childrenPadding: EdgeInsets.all(0),
+              leading: AnimatedContainer(
+                duration: Duration(milliseconds: 500),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: isIRLedOn ? RadialGradient(
+                    colors: [
+                      _getGlowColor(),
+                      _getGlowColor().withOpacity(0.7),
+                    ],
+                    radius: 0.8,
+                  ) : null,
+                  color: isIRLedOn ? null : Colors.grey[200],
+                  boxShadow: isIRLedOn ? [
+                    BoxShadow(
+                      color: _getGlowColor().withOpacity(0.7),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    )
+                  ] : null,
                 ),
-                SizedBox(width: 12),
-                Text(
-                  'Akıllı LED Işık',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isIRLedOn ? Colors.white : Colors.black,
+                child: Icon(
+                  Icons.lightbulb_outline,
+                  color: isIRLedOn ? Colors.white : Colors.grey,
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                'Akıllı LED Işık',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isIRLedOn ? _getLEDTitleColor() : Colors.grey[800],
+                ),
+              ),
+              subtitle: isIRLedOn ? Text(
+                _getStatusText(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ) : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Switch(
+                    value: isIRLedOn,
+                    onChanged: _controlIRLed,
+                    activeColor: _getLEDSwitchColor(),
+                    activeTrackColor: _getLEDSwitchColor().withOpacity(0.5),
+                  ),
+                  Icon(Icons.expand_more),
+                ],
+              ),
+              children: [
+                AnimatedContainer(
+                  duration: Duration(milliseconds: 500),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: _getGradientColors(),
+                      stops: [0.0, 1.0],
+                    ),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Renk Paleti'),
+                        SizedBox(height: 12),
+                        // Renk seçim butonları - Yatay kaydırılabilir
+                        Container(
+                          height: 90,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            physics: BouncingScrollPhysics(),
+                            children: [
+                              _buildColorButton('red', 'Kırmızı', Colors.red),
+                              SizedBox(width: 16),
+                              _buildColorButton('green', 'Yeşil', Colors.green),
+                              SizedBox(width: 16),
+                              _buildColorButton('blue', 'Mavi', Colors.blue),
+                              SizedBox(width: 16),
+                              _buildColorButton('white', 'Beyaz', Colors.white),
+                            ],
+                          ),
+                        ),
+                        
+                        Divider(color: Colors.white30, height: 32),
+                        
+                        _buildSectionTitle('Işık Efektleri'),
+                        SizedBox(height: 12),
+                        // Efekt seçim butonları
+                        Container(
+                          height: 50,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            physics: BouncingScrollPhysics(),
+                            children: [
+                              _buildEffectButton('flash', 'Flash'),
+                              SizedBox(width: 10),
+                              _buildEffectButton('strobe', 'Strobe'),
+                              SizedBox(width: 10),
+                              _buildEffectButton('fade', 'Fade'),
+                              SizedBox(width: 10),
+                              _buildEffectButton('smooth', 'Smooth'),
+                            ],
+                          ),
+                        ),
+                        
+                        Divider(color: Colors.white30, height: 32),
+                        
+                        _buildSectionTitle('Parlaklık Ayarı'),
+                        SizedBox(height: 12),
+                        
+                        // Parlaklık kontrolü
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildControlButton(
+                              icon: Icons.remove, 
+                              onPressed: _decreaseIRLedBrightness
+                            ),
+                            Container(
+                              width: 100,
+                              height: 80,
+                              margin: EdgeInsets.symmetric(horizontal: 20),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white24,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.white30,
+                                    blurRadius: 15,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.lightbulb,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                            _buildControlButton(
+                              icon: Icons.add, 
+                              onPressed: _increaseIRLedBrightness
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Switch(
-                  value: isIRLedOn,
-                  onChanged: _controlIRLed,
-                  activeColor: Colors.white,
-                ),
-                Icon(
-                  Icons.expand_more,
-                  color: isIRLedOn ? Colors.white : Colors.grey,
-                ),
-              ],
-            ),
-            tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            childrenPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-            expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: isIRLedOn
-                ? [
-                    Divider(color: Colors.white30),
-                    SizedBox(height: 12),
-                    Text(
-                      'Renk',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    // Renk seçim butonları
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildColorButton('red', 'Kırmızı', Colors.red),
-                        _buildColorButton('green', 'Yeşil', Colors.green),
-                        _buildColorButton('blue', 'Mavi', Colors.blue),
-                        _buildColorButton('white', 'Beyaz', Colors.white),
-                      ],
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      'Efektler',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    // Efekt seçim butonları
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildEffectButton('flash', 'Flash'),
-                          SizedBox(width: 10),
-                          _buildEffectButton('strobe', 'Strobe'),
-                          SizedBox(width: 10),
-                          _buildEffectButton('fade', 'Fade'),
-                          SizedBox(width: 10),
-                          _buildEffectButton('smooth', 'Smooth'),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      'Parlaklık',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    // Parlaklık kontrol butonları
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: _decreaseIRLedBrightness,
-                          style: ElevatedButton.styleFrom(
-                            shape: CircleBorder(),
-                            padding: EdgeInsets.all(12),
-                            backgroundColor: Colors.black38,
-                          ),
-                          child: Icon(Icons.remove, color: Colors.white),
-                        ),
-                        SizedBox(width: 30),
-                        ElevatedButton(
-                          onPressed: _increaseIRLedBrightness,
-                          style: ElevatedButton.styleFrom(
-                            shape: CircleBorder(),
-                            padding: EdgeInsets.all(12),
-                            backgroundColor: Colors.black38,
-                          ),
-                          child: Icon(Icons.add, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                  ]
-                : [],
           ),
         ),
       ),
     );
+  }
+
+  // Yeni yardımcı metotlar
+  Widget _buildSectionTitle(String title) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.3),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildControlButton({required IconData icon, required VoidCallback onPressed}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        child: Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white24,
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Işık rengine göre glow rengi
+  Color _getGlowColor() {
+    switch (irLedColor) {
+      case 'red':
+        return Colors.red[400]!;
+      case 'green':
+        return Colors.green[400]!;
+      case 'blue':
+        return Colors.blue[400]!;
+      case 'white':
+      default:
+        return Colors.amber[300]!;
+    }
+  }
+
+  // Işık rengine göre başlık rengi
+  Color _getLEDTitleColor() {
+    switch (irLedColor) {
+      case 'red':
+        return Colors.red[700]!;
+      case 'green':
+        return Colors.green[700]!;
+      case 'blue':
+        return Colors.blue[700]!;
+      case 'white':
+      default:
+        return Colors.amber[800]!;
+    }
+  }
+
+  // Işık rengine göre switch rengi
+  Color _getLEDSwitchColor() {
+    switch (irLedColor) {
+      case 'red':
+        return Colors.red[600]!;
+      case 'green':
+        return Colors.green[600]!;
+      case 'blue':
+        return Colors.blue[600]!;
+      case 'white':
+      default:
+        return Colors.amber[600]!;
+    }
+  }
+
+  // Kart için gölge rengi
+  Color _getLEDShadowColor() {
+    switch (irLedColor) {
+      case 'red':
+        return Colors.red.withOpacity(0.3);
+      case 'green':
+        return Colors.green.withOpacity(0.3);
+      case 'blue':
+        return Colors.blue.withOpacity(0.3);
+      case 'white':
+      default:
+        return Colors.amber.withOpacity(0.3);
+    }
+  }
+
+  // Durum metni
+  String _getStatusText() {
+    String effectText = '';
+    switch (irLedEffect) {
+      case 'flash':
+        effectText = 'Flash Efekti';
+        break;
+      case 'strobe':
+        effectText = 'Strobe Efekti';
+        break;
+      case 'fade':
+        effectText = 'Fade Efekti';
+        break;
+      case 'smooth':
+        effectText = 'Smooth Efekti';
+        break;
+      default:
+        effectText = 'Normal Mod';
+    }
+    
+    String colorText = '';
+    switch (irLedColor) {
+      case 'red':
+        colorText = 'Kırmızı';
+        break;
+      case 'green':
+        colorText = 'Yeşil';
+        break;
+      case 'blue':
+        colorText = 'Mavi';
+        break;
+      case 'white':
+      default:
+        colorText = 'Beyaz';
+    }
+    
+    return '$colorText • $effectText';
   }
 
   // IR LED renk seçim butonu
@@ -1263,21 +1507,6 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
       case 'white':
       default:
         return [Color(0xFF6A11CB), Color(0xFF2575FC)]; // Mor-mavi gradyan
-    }
-  }
-
-  // IR LED ikon rengini seçme
-  Color _getIconColor() {
-    switch (irLedColor) {
-      case 'red':
-        return Colors.white;
-      case 'green':
-        return Colors.white;
-      case 'blue':
-        return Colors.white;
-      case 'white':
-      default:
-        return Colors.white;
     }
   }
 }

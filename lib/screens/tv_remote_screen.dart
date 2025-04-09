@@ -1225,7 +1225,7 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: 80,
         child: Column(
           children: [
