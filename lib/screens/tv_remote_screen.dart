@@ -35,17 +35,15 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
   
   Future<void> _getTvStatus() async {
     try {
-      // Simülasyon kullanmak yerine TV durumunu kontrol edebilmek için 
-      // power toggle gönderip TV'nin açık olup olmadığını tahmin edeceğiz
-      // Gerçek durumda ESP32 tarafında bu bilgi API'den döndürülebilir
+      // Artık bellek içinden durum bilgisini alıyoruz
+      final status = SensorService.getTvMemoryStatus();
       
-      // Varsayılan değerleri ayarla
       if (mounted) {
         setState(() {
-          isTvOn = false;
-          currentVolume = 50;
-          currentChannel = 1;
-          isMuted = false;
+          isTvOn = status['isOn'] ?? false;
+          currentVolume = status['volume'] ?? 50;
+          currentChannel = status['channel'] ?? 1;
+          isMuted = status['isMuted'] ?? false;
         });
       }
     } catch (e) {
@@ -74,7 +72,7 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
 
   Future<void> _controlTv(bool isOn) async {
     try {
-      // Yeni apiye uygun olarak güç kontrolü
+      // API üzerinden kontrol
       bool success = await SensorService.controlTvPower();
       if (success && mounted) {
         setState(() {
@@ -108,17 +106,11 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
       
       bool success = await SensorService.controlTvVolume(action);
       if (success && mounted) {
+        // Bellek içindeki durumu alarak güncelle
+        final status = SensorService.getTvMemoryStatus();
         setState(() {
-          // Ses artırma/azaltma için varsayılan değer
-          if (action == 'up') {
-            currentVolume = (currentVolume + 5).clamp(0, 100);
-          } else {
-            currentVolume = (currentVolume - 5).clamp(0, 100);
-          }
-          
-          if (currentVolume > 0) {
-            isMuted = false;
-          }
+          currentVolume = status['volume'] ?? currentVolume;
+          isMuted = status['isMuted'] ?? isMuted;
         });
       }
     } catch (e) {
@@ -138,8 +130,10 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
     try {
       bool success = await SensorService.controlTvVolume('mute');
       if (success && mounted) {
+        // Bellek içindeki durumu alarak güncelle
+        final status = SensorService.getTvMemoryStatus();
         setState(() {
-          isMuted = !isMuted;
+          isMuted = status['isMuted'] ?? !isMuted;
         });
       }
     } catch (e) {
@@ -161,8 +155,10 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
       // Sayısal tuş kullanımı için alternatif yöntem
       bool success = await SensorService.controlTvNumberButton(channel);
       if (success && mounted) {
+        // Bellek içindeki durumu alarak güncelle
+        final status = SensorService.getTvMemoryStatus();
         setState(() {
-          currentChannel = channel;
+          currentChannel = status['channel'] ?? channel;
         });
       }
     } catch (e) {
@@ -183,8 +179,10 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
     try {
       bool success = await SensorService.controlTvChannel('up');
       if (success && mounted) {
+        // Bellek içindeki durumu alarak güncelle
+        final status = SensorService.getTvMemoryStatus();
         setState(() {
-          currentChannel++;
+          currentChannel = status['channel'] ?? (currentChannel + 1);
         });
       }
     } catch (e) {
@@ -197,8 +195,10 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
     try {
       bool success = await SensorService.controlTvChannel('down');
       if (success && mounted && currentChannel > 1) {
+        // Bellek içindeki durumu alarak güncelle
+        final status = SensorService.getTvMemoryStatus();
         setState(() {
-          currentChannel--;
+          currentChannel = status['channel'] ?? (currentChannel - 1);
         });
       }
     } catch (e) {
@@ -694,9 +694,11 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
                                   isActive: false,
                                   onTap: () async {
                                     await SensorService.controlTvVolume('down');
-                                    if (mounted && currentVolume > 0) {
+                                    if (mounted) {
+                                      // Bellek içindeki durumu alarak güncelle
+                                      final status = SensorService.getTvMemoryStatus();
                                       setState(() {
-                                        currentVolume = (currentVolume - 5).clamp(0, 100);
+                                        currentVolume = status['volume'] ?? (currentVolume - 5).clamp(0, 100);
                                       });
                                     }
                                   },
@@ -708,9 +710,11 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
                                   onTap: () async {
                                     await SensorService.controlTvVolume('up');
                                     if (mounted) {
+                                      // Bellek içindeki durumu alarak güncelle
+                                      final status = SensorService.getTvMemoryStatus();
                                       setState(() {
-                                        currentVolume = (currentVolume + 5).clamp(0, 100);
-                                        isMuted = false;
+                                        currentVolume = status['volume'] ?? (currentVolume + 5).clamp(0, 100);
+                                        isMuted = status['isMuted'] ?? false;
                                       });
                                     }
                                   },
@@ -809,8 +813,10 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
                                     onTap: () async {
                                       await SensorService.controlTvNumberButton(number);
                                       if (mounted) {
+                                        // Bellek içindeki durumu alarak güncelle
+                                        final status = SensorService.getTvMemoryStatus();
                                         setState(() {
-                                          currentChannel = number;
+                                          currentChannel = status['channel'] ?? number;
                                         });
                                       }
                                     },

@@ -4,53 +4,121 @@ import 'dart:async';
 import 'package:smarthome/screens/automation_screen.dart'; // AutomationRule sınıfını kullanmak için import
 
 class SensorService {
+  // Son uygulanan otomasyon işlemlerini izleme
+  static Map<String, int> _lastAppliedRules = {};
+
   // Otomasyon kurallarını uygulama metodu
   static Future<bool> applyAutomationRule(
       String room, AutomationRule rule, Map<String, double> sensorData) async {
     if (!rule.isEnabled) return false;
 
-    double temperature = sensorData['temperature'] ?? 0.0;
-    double humidity = sensorData['humidity'] ?? 0.0;
-    bool shouldTurnOnAC = false;
-
-    // Sıcaklık eşiği kontrolü (büyük/küçük karşılaştırma)
-    if (rule.isTemperatureAbove) {
-      // Sıcaklık eşiğin üzerindeyse
-      shouldTurnOnAC = temperature > rule.temperatureThreshold;
-    } else {
-      // Sıcaklık eşiğin altındaysa
-      shouldTurnOnAC = temperature < rule.temperatureThreshold;
+    // Son 5 dakika içinde aynı oda için otomasyon uygulandıysa tekrar uygulama
+    int currentTime = DateTime.now().millisecondsSinceEpoch;
+    int lastAppliedTime = _lastAppliedRules[room] ?? 0;
+    int timeDifference = currentTime - lastAppliedTime;
+    
+    if (lastAppliedTime > 0 && timeDifference < 300000) { // 5 dakika
+      print('$room odasına son $timeDifference ms önce otomasyon uygulandı, tekrar uygulanmıyor');
+      return true; // Başarılı gibi true dön, işlem tekrar yapılmasın
     }
 
-    // Nem eşiği kontrolü (büyük/küçük karşılaştırma)
-    if (rule.isHumidityAbove) {
-      // Nem eşiğin üzerindeyse
-      shouldTurnOnAC = shouldTurnOnAC || humidity > rule.humidityThreshold;
-    } else {
-      // Nem eşiğin altındaysa
-      shouldTurnOnAC = shouldTurnOnAC || humidity < rule.humidityThreshold;
-    }
-
-    if (shouldTurnOnAC) {
-      // Klimayı aç ve hedef sıcaklığı ayarla - paralel çalıştır
-      // İki işlemi aynı anda başlat ve sonuçlarını bekle
-      final results = await Future.wait(
-          [setACStatus(true), setACTemperature(rule.targetTemperature)]);
-
-      // Her iki işlem de başarılı olduysa true döndür
-      bool success = results[0] && results[1];
-
-      if (success) {
-        print(
-            'Otomasyon kuralı uygulandı: $room odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
+    // Önce mevcut AC durumunu kontrol et
+    try {
+      final acStatus = await getACStatus();
+      bool isAlreadyOn = acStatus['status'] == 'on';
+      int currentTemp = acStatus['temperature'] ?? 0;
+      
+      // Eğer klima zaten açık ve hedef sıcaklıkta ise tekrar işlem yapma
+      if (isAlreadyOn && currentTemp == rule.targetTemperature) {
+        print('Klima zaten açık ve hedef sıcaklıkta (${rule.targetTemperature}°C), işlem atlandı.');
+        // Son uygulama zamanını güncelle
+        _lastAppliedRules[room] = currentTime;
         return true;
+      }
+      
+      // Koşulları kontrol et
+      double temperature = sensorData['temperature'] ?? 0.0;
+      double humidity = sensorData['humidity'] ?? 0.0;
+      bool shouldTurnOnAC = false;
+
+      // Sıcaklık eşiği kontrolü (büyük/küçük karşılaştırma)
+      if (rule.isTemperatureAbove) {
+        // Sıcaklık eşiğin üzerindeyse
+        shouldTurnOnAC = temperature > rule.temperatureThreshold;
       } else {
-        print('Otomasyon kuralı uygulanamadı: İşlemlerden biri başarısız oldu');
+        // Sıcaklık eşiğin altındaysa
+        shouldTurnOnAC = temperature < rule.temperatureThreshold;
+      }
+
+      // Nem eşiği kontrolü (büyük/küçük karşılaştırma)
+      if (rule.isHumidityAbove) {
+        // Nem eşiğin üzerindeyse
+        shouldTurnOnAC = shouldTurnOnAC || humidity > rule.humidityThreshold;
+      } else {
+        // Nem eşiğin altındaysa
+        shouldTurnOnAC = shouldTurnOnAC || humidity < rule.humidityThreshold;
+      }
+
+      if (shouldTurnOnAC) {
+        // Klimayı aç ve hedef sıcaklığı ayarla
+        print('Otomasyon koşulları sağlandı, klima açılıyor. Sıcaklık: $temperature°C, Nem: $humidity%');
+        
+        // Burada paralel olarak iki işlemi çağırmak arka arkaya tekrara neden olabilir
+        // Önce klimayı aç, sonra sıcaklığı ayarla
+        bool acSuccess = await setACStatus(true);
+        
+        if (acSuccess) {
+          // Kısa bir bekleme ekleyelim
+          await Future.delayed(Duration(milliseconds: 500));
+          
+          // Sonra sıcaklığı ayarla
+          bool tempSuccess = await setACTemperature(rule.targetTemperature);
+          
+          if (tempSuccess) {
+            // İşlem başarılıysa son uygulama zamanını güncelle
+            _lastAppliedRules[room] = currentTime;
+            print('Otomasyon kuralı uygulandı: $room odası için klima açıldı, sıcaklık: ${rule.targetTemperature}°C');
+            return true;
+          } else {
+            print('Otomasyon kuralı kısmen uygulandı: Klima açıldı fakat sıcaklık ayarlanamadı');
+            return true; // Yine de başarılı sayalım, klimayı açtık en azından
+          }
+        } else {
+          print('Otomasyon kuralı uygulanamadı: Klima açılamadı');
+          return false;
+        }
+      } else {
+        print('Otomasyon koşulları sağlanmadı, işlem yapılmadı');
         return false;
       }
+    } catch (e) {
+      print('AC durumu kontrol edilirken hata: $e');
+      return false;
     }
+  }
 
-    return false;
+  // TV durum değişkenlerini bellek içinde tutma
+  static bool _isTvOn = false;
+  static int _tvVolume = 50;
+  static int _tvChannel = 1;
+  static bool _isTvMuted = false;
+  
+  // TV durum bilgilerini alma
+  static Map<String, dynamic> getTvMemoryStatus() {
+    return {
+      'isOn': _isTvOn,
+      'volume': _tvVolume,
+      'channel': _tvChannel,
+      'isMuted': _isTvMuted,
+    };
+  }
+  
+  // TV durum bilgilerini güncelleme
+  static void updateTvMemoryStatus({bool? isOn, int? volume, int? channel, bool? isMuted}) {
+    if (isOn != null) _isTvOn = isOn;
+    if (volume != null) _tvVolume = volume;
+    if (channel != null) _tvChannel = channel;
+    if (isMuted != null) _isTvMuted = isMuted;
   }
 
   static const String apiUrl = 'http://192.168.1.5'; // ESP32'nin IP adresi
@@ -135,6 +203,10 @@ class SensorService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // Sıcaklık değeri double ise int'e dönüştür
+        if (data['temperature'] is double) {
+          data['temperature'] = data['temperature'].round();
+        }
         return data;
       } else {
         throw Exception('AC durumu alınamadı');
@@ -435,6 +507,8 @@ class SensorService {
       
       if (response.statusCode == 200) {
         print('TV güç durumu değiştirildi');
+        // Bellek içindeki durumu güncelle
+        _isTvOn = !_isTvOn;
         return true;
       } else {
         print('TV güç durumu değiştirilemedi');
@@ -458,6 +532,17 @@ class SensorService {
       
       if (response.statusCode == 200) {
         print('TV ses seviyesi $action işlemi uygulandı');
+        
+        // Bellek içindeki durumu güncelle
+        if (action == 'up') {
+          _tvVolume = (_tvVolume + 5).clamp(0, 100);
+          _isTvMuted = false;
+        } else if (action == 'down') {
+          _tvVolume = (_tvVolume - 5).clamp(0, 100);
+        } else if (action == 'mute') {
+          _isTvMuted = !_isTvMuted;
+        }
+        
         return true;
       } else {
         print('TV ses seviyesi değiştirilemedi');
@@ -481,6 +566,14 @@ class SensorService {
       
       if (response.statusCode == 200) {
         print('TV kanal $action işlemi uygulandı');
+        
+        // Bellek içindeki durumu güncelle
+        if (action == 'up') {
+          _tvChannel++;
+        } else if (action == 'down' && _tvChannel > 1) {
+          _tvChannel--;
+        }
+        
         return true;
       } else {
         print('TV kanal değiştirilemedi');
@@ -488,6 +581,33 @@ class SensorService {
       }
     } catch (e) {
       print('TV kanal kontrolü sırasında hata: $e');
+      return false;
+    }
+  }
+  
+  // TV Sayısal Tuş Kontrolü
+  static Future<bool> controlTvNumberButton(int number) async {
+    if (number < 0 || number > 9) {
+      print('Geçersiz sayı: $number');
+      return false;
+    }
+    
+    try {
+      final response = await http.get(Uri.parse('$apiUrl/remote?button=$number'));
+      
+      if (response.statusCode == 200) {
+        print('TV $number tuşu uygulandı');
+        
+        // Bellek içindeki kanal bilgisini güncelle (kanal değiştirme amacıyla kullanıldığında)
+        _tvChannel = number;
+        
+        return true;
+      } else {
+        print('TV sayısal tuşu uygulanamadı');
+        return false;
+      }
+    } catch (e) {
+      print('TV sayısal tuş kontrolü sırasında hata: $e');
       return false;
     }
   }
@@ -529,29 +649,6 @@ class SensorService {
       }
     } catch (e) {
       print('TV OK tuşu kontrolü sırasında hata: $e');
-      return false;
-    }
-  }
-  
-  // TV Sayısal Tuş Kontrolü
-  static Future<bool> controlTvNumberButton(int number) async {
-    if (number < 0 || number > 9) {
-      print('Geçersiz sayı: $number');
-      return false;
-    }
-    
-    try {
-      final response = await http.get(Uri.parse('$apiUrl/remote?button=$number'));
-      
-      if (response.statusCode == 200) {
-        print('TV $number tuşu uygulandı');
-        return true;
-      } else {
-        print('TV sayısal tuşu uygulanamadı');
-        return false;
-      }
-    } catch (e) {
-      print('TV sayısal tuş kontrolü sırasında hata: $e');
       return false;
     }
   }
